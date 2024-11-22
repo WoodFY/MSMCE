@@ -3,7 +3,7 @@ import os
 from utils.file_split import (
     split_nsclc_mzml_files,
     split_crlm_files,
-    split_rcc_mzml_files
+    split_rcc_mzml_files,
 )
 from utils.data_loader import (
     get_file_paths,
@@ -12,7 +12,7 @@ from utils.data_loader import (
     load_microorganisms_mzml,
     load_nsclc_mzml,
     load_crlm_mzml,
-    load_rcc_mzml
+    load_rcc_mzml,
 )
 from utils.dataset_split import split_dataset
 from utils.data_process import bin_spectra

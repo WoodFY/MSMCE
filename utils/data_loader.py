@@ -1,9 +1,7 @@
 import os
 import glob
-import h5py
 import pickle
 import numpy as np
-import pandas as pd
 import pyopenms as openms
 
 from utils.data_process import bin_spectra
@@ -158,6 +156,7 @@ def load_mass_spectra_process_to_bin(file_paths, file_type, get_label_function, 
     labels = []
 
     for file_path in file_paths:
+        print(f"Processing file: {file_path}")
         exp = openms.MSExperiment()
 
         if file_type == 'mzML':
@@ -318,28 +317,6 @@ def load_microorganisms_mzml(file_paths, label_mapping, num_classes):
     return total_mz_arrays, total_intensity_arrays, labels
 
 
-def load_rcc_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binning_window=10):
-
-    def get_label_from_path(file_path):
-        dir_name = os.path.basename(os.path.dirname(file_path))
-
-        if dir_name in ['RCC', 'Healthy']:
-            return dir_name
-        else:
-            raise ValueError(f'Unknown label in file path: {file_path}')
-
-    return load_mass_spectra_process_to_bin(
-        file_paths=file_paths,
-        file_type='mzML',
-        get_label_function=get_label_from_path,
-        label_mapping=label_mapping,
-        min_mz=min_mz,
-        max_mz=max_mz,
-        bin_size=bin_size,
-        rt_binning_window=rt_binning_window
-    )
-
-
 def load_nsclc_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binning_window):
 
     def get_label_from_path(file_path):
@@ -386,33 +363,27 @@ def load_crlm_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binni
     )
 
 
-def load_rcc_csv(file_paths, label_mapping):
+def load_rcc_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binning_window=10):
 
     def get_label_from_path(file_path):
         dir_name = os.path.basename(os.path.dirname(file_path))
 
-        if dir_name == 'RCC' or dir_name == 'Healthy':
+        if dir_name in ['RCC', 'Healthy']:
             return dir_name
         else:
             raise ValueError(f'Unknown label in file path: {file_path}')
 
-    total_mz_arrays = []
-    total_intensity_arrays = []
-    labels = []
+    return load_mass_spectra_process_to_bin(
+        file_paths=file_paths,
+        file_type='mzML',
+        get_label_function=get_label_from_path,
+        label_mapping=label_mapping,
+        min_mz=min_mz,
+        max_mz=max_mz,
+        bin_size=bin_size,
+        rt_binning_window=rt_binning_window
+    )
 
-    for file_path in file_paths:
-        df = pd.read_csv(file_path)
-
-        mz_array = df.iloc[:, 0].values
-        intensity_array = df.iloc[:, 3].values
-        label = get_label_from_path(file_path)
-        mapped_label = label_mapping[label]
-
-        total_mz_arrays.append(mz_array)
-        total_intensity_arrays.append(intensity_array)
-        labels.append(mapped_label)
-
-    return total_mz_arrays, total_intensity_arrays, labels
 
 
 

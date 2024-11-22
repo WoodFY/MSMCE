@@ -22,7 +22,7 @@ from prepare_datasets import (
     prepare_microorganisms_dataset,
     prepare_nsclc_dataset,
     prepare_crlm_dataset,
-    prepare_rcc_dataset
+    prepare_rcc_dataset,
 )
 from utils.tools import EarlyStopping
 from utils.dataset_split import split_dataset
@@ -43,15 +43,7 @@ def get_bin_dataset_path(exp_args):
 
         saved_bin_train_dataset_path = f"{bin_dataset_dir}/{exp_args['dataset']}_classes_{exp_args['num_classes']}_bin_{exp_args['bin_size']}_train.pkl"
         saved_bin_test_dataset_path = f"{bin_dataset_dir}/{exp_args['dataset']}_classes_{exp_args['num_classes']}_bin_{exp_args['bin_size']}_test.pkl"
-    elif exp_args['dataset'] == 'glioblastoma':
-        bin_dataset_dir = os.path.join(exp_args['root_dir'], exp_args['dataset_dir'])
-
-        if os.path.exists(bin_dataset_dir) is False:
-            os.makedirs(bin_dataset_dir)
-
-        saved_bin_train_dataset_path = f"{bin_dataset_dir}/{exp_args['dataset']}_train.pkl"
-        saved_bin_test_dataset_path = f"{bin_dataset_dir}/{exp_args['dataset']}_test.pkl"
-    elif exp_args['dataset'] in ['rcc_posion', 'nsclc', 'crlm', 'chd_urine', 'chd_serum']:
+    elif exp_args['dataset'] in ['rcc_posion', 'nsclc', 'crlm', 'enterobacter']:
         bin_dataset_dir = os.path.join(exp_args['root_dir'], exp_args['dataset_dir'].replace('raw', f"bin/bin_{exp_args['bin_size']}"))
 
         if os.path.exists(bin_dataset_dir) is False:
@@ -112,6 +104,8 @@ def prepare_dataset(exp_args, label_mapping):
                 exp_args=exp_args,
                 label_mapping=label_mapping
             )
+        else:
+            raise ValueError(f'Unknown dataset: {exp_args["dataset"]}')
 
         print(f'X_train.shape: {X_train.shape} y_train.shape: {y_train.shape}')
         print(f'X_test.shape: {X_test.shape} y_test.shape: {y_test.shape}')
@@ -212,7 +206,7 @@ def exp(exp_args, save_dir, label_mapping, device, use_multi_gpu=False):
 
     optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
     optimizers = [optimizer]
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, min_lr=1e-12)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, min_lr=1e-32)
     schedulers = [scheduler]
 
     if exp_args['is_early_stopping']:
@@ -323,7 +317,7 @@ def main():
         'canine_sarcoma_posion': 'data/Canine_sarcoma/raw/positive',  # 100-1600 Da spectrum_dim 15000
         'microorganisms': 'data/Microorganisms/raw',  # 100-2000 Da spectrum_dim 19000
         'nsclc': 'data/NSCLC/raw',  # spectrum_dim 12000
-        'crlm': 'data/CRLM/raw/mzML',  # spectrum_dim 12000
+        'crlm': 'data/CRLM/raw',  # spectrum_dim 12000
         'rcc_posion': 'data/RCC/raw/positive',  # spectrum_dim 9900
     }
 
@@ -357,7 +351,7 @@ def main():
         },
         'nsclc': {'ADC': 0, 'SCC': 1},
         'crlm': {'Control': 0, 'CRLM': 1},
-        'rcc': {'Control': 0, 'RCC': 1}
+        'rcc': {'Control': 0, 'RCC': 1},
     }
 
     label_mapping = None

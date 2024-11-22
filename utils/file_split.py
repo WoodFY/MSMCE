@@ -1,5 +1,4 @@
 import os
-import re
 
 from collections import defaultdict
 from sklearn.model_selection import train_test_split
@@ -91,19 +90,6 @@ def split_files_by_label_sample_id(file_paths, get_label_function, get_sample_id
     return total_train_file_paths, total_test_file_paths
 
 
-def split_rcc_mzml_files(file_paths, train_size=0.9, test_size=0.1, random_seed=3407):
-
-    def get_label_from_path(file_path):
-        dir_name = os.path.basename(os.path.dirname(file_path))
-
-        if dir_name in ['Healthy', 'RCC']:
-            return dir_name
-        else:
-            raise ValueError(f'Invalid directory name: {dir_name}')
-
-    return split_files_by_label(file_paths, get_label_from_path, train_size, test_size, random_seed)
-
-
 def split_nsclc_mzml_files(file_paths, random_seed=3407):
     total_counts = len(file_paths)
 
@@ -149,132 +135,14 @@ def split_crlm_files(file_paths):
     return split_files_by_label(file_paths, get_label_from_path)
 
 
-def split_chd_files(file_paths):
-
-    train_file_paths, test_file_paths = [], []
-
-    # batch_1 for train, batch_2 for test
-    for file_path in file_paths:
-        if 'batch_1' in file_path:
-            train_file_paths.append(file_path)
-        elif 'batch_2' in file_path:
-            test_file_paths.append(file_path)
-        else:
-            raise ValueError(f'Unknown file name: {file_path}')
-
-    return train_file_paths, test_file_paths
-
-
-def split_colon_cancer_excel_files(file_paths, random_seed=3407):
+def split_rcc_mzml_files(file_paths, train_size=0.9, test_size=0.1, random_seed=3407):
 
     def get_label_from_path(file_path):
+        dir_name = os.path.basename(os.path.dirname(file_path))
 
-        filename = os.path.basename(file_path)
-
-        if 'N' in filename:
-            return 'N'
-        elif 'E-P' in filename:
-            return 'E-P'
-        elif 'W-P' in filename:
-            return 'W-P'
+        if dir_name in ['Healthy', 'RCC']:
+            return dir_name
         else:
-            raise ValueError(f'Unknown label in file name: {filename}')
+            raise ValueError(f'Invalid directory name: {dir_name}')
 
-    return split_files_by_label(file_paths, get_label_from_path, random_seed=random_seed)
-
-
-def split_covid_excel_files(file_paths, random_seed=3407):
-
-    def get_label_from_path(file_path):
-
-        filename = os.path.basename(file_path)
-
-        if 'N' in filename:
-            return 'N'
-        elif 'P' in filename:
-            return 'P'
-        else:
-            raise ValueError(f'Unknown label in file name: {filename}')
-
-    return split_files_by_label(file_paths, get_label_from_path, random_seed=random_seed)
-
-
-def split_cell_excel_files(file_paths, random_seed=3407):
-
-    def get_label_from_path(file_path):
-
-        filename = os.path.basename(file_path)
-
-        if 'BT-474' in filename:
-            return 'BT-474'
-        elif 'MCF7' in filename:
-            return 'MCF7'
-        elif 'MDA-MB-468' in filename:
-            return 'MDA-MB-468'
-        elif 'skbr3' in filename:
-            return 'skbr3'
-        else:
-            raise ValueError(f'Unknown label in file name: {filename}')
-
-    return split_files_by_label(file_paths, get_label_from_path, random_seed=random_seed)
-
-
-def split_beef_liver_mzxml_files(file_paths, random_seed=3407):
-
-    def get_label_from_path(file_path):
-
-        filename = os.path.basename(file_path)
-
-        if 'Neg' in filename:
-            return 'Neg'
-        elif 'Pos' in filename:
-            return 'Pos'
-        else:
-            raise ValueError(f'Unknown label in file name: {filename}')
-
-    return split_files_by_label(file_paths, get_label_from_path, random_seed=random_seed)
-
-
-def split_beef_liver_h5_files(file_paths, random_seed=3407):
-
-    def get_label_from_path(file_path):
-
-        filename = os.path.basename(file_path)
-
-        if 'Neg' in filename:
-            return 'Neg'
-        elif 'Pos' in filename:
-            return 'Pos'
-        else:
-            raise ValueError(f'Unknown label in file name: {filename}')
-
-    return split_files_by_label(file_paths, get_label_from_path, random_seed=random_seed)
-
-
-def split_lung_cancer_mzml_files(file_paths, random_seed=3407):
-
-    def get_label_from_path(file_path):
-        # for example: file_path = data/Lung_cancer/raw/cancer/0001A8.mzML
-        # os.path.dirname(file_path) -> data/Lung_cancer/raw/cancer
-        # os.path.basename(os.path.dirname(file_path)) -> cancer
-        label = os.path.basename(os.path.dirname(file_path))
-
-        return label
-
-    def get_sample_id_from_path(file_path):
-        filename = os.path.basename(file_path)
-        match = re.match(r'(\w{5})', filename)
-        if match:
-            return match.group(1)
-        else:
-            raise ValueError(f'Unknown sample id in file name: {filename}')
-
-    # return split_files_by_label(file_paths, get_label_from_path, random_seed=random_seed)
-    return split_files_by_label_sample_id(
-        file_paths,
-        get_label_from_path,
-        get_sample_id_from_path,
-        train_size=0.9,
-        test_size=0.1,
-        random_seed=3407
-    )
+    return split_files_by_label(file_paths, get_label_from_path, train_size, test_size, random_seed)
