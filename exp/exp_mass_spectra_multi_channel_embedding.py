@@ -276,7 +276,6 @@ def main():
     parser.add_argument('--save_dir', type=str, default='checkpoints/embedding', help='Directory to save checkpoints')
     parser.add_argument('--model_name', type=str, default='AeEmbeddingLeNet', help='Model name')
     parser.add_argument('--dataset', type=str, required=True, help='Dataset to use')
-    parser.add_argument('--file_extension', type=str, default='h5', help='File extension')
     # bin
     parser.add_argument('--in_channels', type=int, default=1, help='Number of input channels')
     parser.add_argument('--spectrum_dim', type=int, default=15000, help='Spectrum dimension')
@@ -295,7 +294,6 @@ def main():
     parser.add_argument('--is_normalization', action='store_true', help='Use normalization')
     parser.add_argument('--is_early_stopping', action='store_true', help='Use early stopping')
     parser.add_argument('--patience', type=int, default=20, help='Early stopping patience')
-    parser.add_argument('--iteration', type=int, default=10, help='Number of iterations')
 
     args = parser.parse_args()
 
