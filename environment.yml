@@ -1,0 +1,23 @@
+name: ms_torch
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8
+  - pytorch
+  - pytorch-cuda=12.1
+  - torchaudio
+  - torchvision
+  - h5py
+  - pandas
+  - tqdm
+  - scikit-learn
+  - matplotlib
+  - seaborn
+  - openpyxl
+  - jupyter
+  - torchinfo
+  - pymzml
+  - pyimzml
+prefix: /home/sysadmin/anaconda3/envs/ms_torch
