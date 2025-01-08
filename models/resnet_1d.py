@@ -3,7 +3,7 @@ import torch.nn as nn
 
 import math
 
-from model.embedding.learnable_embedding import MultiChannelEmbedding
+from models.embedding.learnable_embedding import MultiChannelEmbedding
 
 
 class Bottleneck(nn.Module):
@@ -358,7 +358,7 @@ if __name__ == '__main__':
     })
     model = build_resnet_1d(model_args)
 
-    # print model structure
+    # print models structure
     print(model)
 
     x = torch.randn(1, model_args['spectrum_dim'])
