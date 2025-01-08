@@ -13,11 +13,11 @@ from datetime import datetime
 from sklearn.utils.class_weight import compute_class_weight
 
 from trainer import train, test
-from datasets import MassSpectraDataset
-from model.resnet_1d import build_resnet_1d
-from model.densenet_1d import build_densenet_1d
-from model.efficientnet_1d import build_efficientnet_1d
-from prepare_datasets import (
+from datasets.datasets import MassSpectraDataset
+from models.resnet_1d import build_resnet_1d
+from models.densenet_1d import build_densenet_1d
+from models.efficientnet_1d import build_efficientnet_1d
+from datasets.prepare_datasets import (
     prepare_canine_sarcoma_dataset,
     prepare_microorganisms_dataset,
     prepare_nsclc_dataset,
@@ -195,8 +195,8 @@ def exp(exp_args, save_dir, label_mapping, device, use_multi_gpu=False):
     if use_multi_gpu and torch.cuda.device_count() > 1:
         print(f'Using {torch.cuda.device_count()} GPUs for training.')
         device = torch.device("cuda:0")  # set the main GPU as cuda:0
-        model = model.to(device)  # move the model to the main GPU
-        model = nn.DataParallel(model)  # wrap the model with DataParallel for multi-GPU support 
+        model = model.to(device)  # move the models to the main GPU
+        model = nn.DataParallel(model)  # wrap the models with DataParallel for multi-GPU support
     else:
         model = model.to(device)
 
@@ -222,7 +222,7 @@ def exp(exp_args, save_dir, label_mapping, device, use_multi_gpu=False):
         )
     )
 
-    # save model summary to txt
+    # save models summary to txt
     with open(os.path.join(exp_dir, f"{exp_dir_name}_model_summary.txt"), 'w', encoding='utf-8') as file:
         file.write(str(model_summary))
 
@@ -274,7 +274,7 @@ def main():
     parser = argparse.ArgumentParser(description='Mass Spectra Embedding')
     parser.add_argument('--root_dir', type=str, default='../', help='Root directory')
     parser.add_argument('--save_dir', type=str, default='checkpoints/embedding', help='Directory to save checkpoints')
-    parser.add_argument('--model_name', type=str, default='AeEmbeddingLeNet', help='Model name')
+    parser.add_argument('--model_name', type=str, default='MultiChannelEmbeddingResNet50', help='Model name')
     parser.add_argument('--dataset', type=str, required=True, help='Dataset to use')
     # bin
     parser.add_argument('--in_channels', type=int, default=1, help='Number of input channels')
@@ -312,11 +312,11 @@ def main():
         os.makedirs(save_dir)
 
     dataset_dirs = {
-        'canine_sarcoma_posion': 'data/Canine_sarcoma/raw/positive',  # 100-1600 Da spectrum_dim 15000
-        'microorganisms': 'data/Microorganisms/raw',  # 100-2000 Da spectrum_dim 19000
-        'nsclc': 'data/NSCLC/raw',  # spectrum_dim 12000
-        'crlm': 'data/CRLM/raw',  # spectrum_dim 12000
-        'rcc_posion': 'data/RCC/raw/positive',  # spectrum_dim 9900
+        'canine_sarcoma_posion': 'datasets/Canine_sarcoma/raw/positive',  # 100-1600 Da spectrum_dim 15000
+        'microorganisms': 'datasets/Microorganisms/raw',  # 100-2000 Da spectrum_dim 19000
+        'nsclc': 'datasets/NSCLC/raw',  # spectrum_dim 12000
+        'crlm': 'datasets/CRLM/raw',  # spectrum_dim 12000
+        'rcc_posion': 'datasets/RCC/raw/positive',  # spectrum_dim 9900
     }
 
     label_mappings = {
@@ -401,12 +401,12 @@ def main():
     # metrics_statistics = calculate_metrics_statistics(metrics_results)
 
     if 'Embedding' in exp_args['model_name']:
-        print(f"\n{exp_args['model_name']} {args.dataset} in_channels: {exp_args['in_channels']}, spectrum_dim: {exp_args['spectrum_dim']}, "
+        print(f"{exp_args['model_name']} {args.dataset} in_channels: {exp_args['in_channels']}, spectrum_dim: {exp_args['spectrum_dim']}, "
               f"embedding_channels: {exp_args['embedding_channels']}, embedding_dim: {exp_args['embedding_dim']}, num_classes: {exp_args['num_classes']}, "
               f"batch_size: {exp_args['batch_size']}, epochs: {exp_args['epochs']}")
 
     else:
-        print(f"\n{exp_args['model_name']} {args.dataset} in_channels: {exp_args['in_channels']}, spectrum_dim: {exp_args['spectrum_dim']}, num_classes: {exp_args['num_classes']}, "
+        print(f"{exp_args['model_name']} {args.dataset} in_channels: {exp_args['in_channels']}, spectrum_dim: {exp_args['spectrum_dim']}, num_classes: {exp_args['num_classes']}, "
               f"batch_size: {exp_args['batch_size']}, epochs: {exp_args['epochs']}")
 
     for metric, result in metrics_results.items():
