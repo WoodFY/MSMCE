@@ -34,7 +34,7 @@ conda env create -f environment.yml
 ```
 
 ## Data
-The required data files should be put into `data/` folder. Note that the input of each dataset is tic normalized in this implementation.
+The required data files should be put into `datasets/` folder. Note that the input of each dataset is tic normalized in this implementation.
 
 The MS raw data can be downloaded from the source and the processed data can be downloaded here.
 - [Google Drive](https://drive.google.com/drive/folders/16CIJCkPArsCuJrTgT7Y20jWUpHtflFNH?usp=sharing)
@@ -64,7 +64,7 @@ More parameter information please refer to `exp_mass_spectra_multi_channel_embed
 We provide a more detailed and complete command description for training and testing the model:
 
 ```python
-python main.py --root_dir <root_dir> --save_dir <save_dir> --model_name <model> --dataset <dataset> \
+python exp_mass_spectra_multi_channel_embedding.py --root_dir <root_dir> --save_dir <save_dir> --model_name <model> --dataset <dataset> \
 --in_channels <in_channels> --spectrum_dim <spectrum_dim> --bin_size <bin_size> --rt_binning_window <rt_binning_window> \
 --embedding_channels <embedding_channels> --embedding_dim <embedding_dim> --num_classes <num_classes> --batch_size <batch_size> \
 --epochs <epochs> --device <cuda:x> --use_multi_gpu --is_augmentation --is_normalization --is_early_stopping --patience <patience>\ 
