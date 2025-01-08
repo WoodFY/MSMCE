@@ -24,7 +24,7 @@ from datasets.prepare_datasets import (
     prepare_crlm_dataset,
     prepare_rcc_dataset,
 )
-from utils.tools import EarlyStopping
+from callbacks.early_stopping import EarlyStopping
 from utils.dataset_split import split_dataset
 from utils.data_loader import load_bin_mass_spec_data_from_pickle
 from utils.data_normalization import tic_normalization
