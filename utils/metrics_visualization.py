@@ -1,11 +1,10 @@
 import os
-import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 from datetime import datetime
 
-from exp.metrics import compute_confusion_matrix, compute_roc_auc
+from utils.metrics import compute_confusion_matrix, compute_roc_auc
 
 
 def plot_metrics(metrics, titles, plot_title, save_dir):
