@@ -18,7 +18,7 @@ def train(
     valid_losses = []
     valid_accuracies = []
 
-    min_loss = float('inf')
+    min_loss = np.inf
 
     for epoch in range(epochs):
         model.train()
@@ -106,6 +106,7 @@ def train(
             if epoch_valid_loss < min_loss:
                 min_loss = epoch_valid_loss
                 torch.save(model.state_dict(), str(save_model_path))
+                print(f"Model saved at epoch {epoch}, validation loss: {min_loss:.4f}")
 
     if is_metrics_visualization:
         metrics = [
