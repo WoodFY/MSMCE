@@ -7,7 +7,6 @@ def split_dataset(X, y, train_size=0.9, test_size=0.1, random_seed=3047):
     """
     Split the dataset into train and test sets.
     """
-
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
