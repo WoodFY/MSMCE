@@ -1,44 +1,8 @@
 import os
-import glob
-import pickle
 import numpy as np
 import pyopenms as openms
 
 from utils.data_process import bin_spectra
-
-
-def get_file_paths(root_dir, data_dir, suffix):
-    file_paths = []
-    files_dir = os.path.join(root_dir, data_dir)
-    if os.path.exists(files_dir):
-        for root, dirs, files in os.walk(str(files_dir)):
-            for file in glob.glob(os.path.join(root, f'*.{suffix}')):
-                file_paths.append(file)
-        return file_paths
-    else:
-        raise FileNotFoundError(f"Directory not found: {files_dir}")
-
-
-def save_raw_mass_spec_data_to_pickle(file_path, mz_arrays, intensity_arrays, labels):
-    with open(file_path, 'wb') as file:
-        pickle.dump((mz_arrays, intensity_arrays, labels), file)
-
-
-def save_bin_mass_spec_data_to_pickle(file_path, mz_array, intensity_matrix, labels):
-    with open(file_path, 'wb') as file:
-        pickle.dump((mz_array, intensity_matrix, labels), file)
-
-
-def load_raw_mass_spec_data_from_pickle(file_path):
-    with open(file_path, 'rb') as file:
-        mz_arrays, intensity_arrays, labels = pickle.load(file)
-    return mz_arrays, intensity_arrays, labels
-
-
-def load_bin_mass_spec_data_from_pickle(file_path):
-    with open(file_path, 'rb') as file:
-        mz_array, intensity_matrix, labels = pickle.load(file)
-    return mz_array, intensity_matrix, labels
 
 
 def read_mzxml(file_path, tic_threshold=None, non_zero_threshold=None, tic_normalize=False, min_max_normalize=False):
