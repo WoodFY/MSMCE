@@ -5,19 +5,28 @@ from torchinfo import summary
 from torch.utils.data import DataLoader
 
 import os
+import time
 import argparse
 import numpy as np
 import pandas as pd
 
+from thop import profile, clever_format
 from datetime import datetime
 from sklearn.utils.class_weight import compute_class_weight
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
 
 from trainer import train, test
+from ml_trainer import train_test_ml
 from datasets.datasets import MassSpectraDataset
 from models.resnet_1d import build_resnet_1d
 from models.densenet_1d import build_densenet_1d
 from models.efficientnet_1d import build_efficientnet_1d
+from models.lstm import build_lstm
+from models.transformer import build_transformer
 from datasets.prepare_datasets import (
+    load_bin_mass_spec_data_from_pickle,
     prepare_canine_sarcoma_dataset,
     prepare_microorganisms_dataset,
     prepare_nsclc_dataset,
@@ -26,11 +35,10 @@ from datasets.prepare_datasets import (
 )
 from callbacks.early_stopping import EarlyStopping
 from utils.dataset_split import split_dataset
-from utils.data_loader import load_bin_mass_spec_data_from_pickle
 from utils.data_normalization import tic_normalization
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1, 2, 3"
 
 
 def get_bin_dataset_path(exp_args):
@@ -114,38 +122,15 @@ def prepare_dataset(exp_args, label_mapping):
 
 
 def exp(exp_args, save_dir, label_mapping, device, use_multi_gpu=False):
-    if 'Embedding' in exp_args['model_name']:
-        print(f"{exp_args['model_name']} {exp_args['dataset']}_dataset num_classes {exp_args['num_classes']} in_channels: {exp_args['in_channels']} spectrum_dim: {exp_args['spectrum_dim']} embedding_channels: {exp_args['embedding_channels']} embedding_dim: {exp_args['embedding_dim']}")
-        exp_dir_name = (f"{exp_args['model_name']}_{exp_args['dataset']}_dataset_num_classes_{exp_args['num_classes']}_in_channels_{exp_args['in_channels']}_spectrum_dim_{exp_args['spectrum_dim']}"
-                        f"embedding_channels_{exp_args['embedding_channels']}_embedding_dim_{exp_args['embedding_dim']}_batch_size_{exp_args['batch_size']}")
-        exp_dir = os.path.join(
-            save_dir,
-            exp_dir_name
-        )
 
-    else:
-        print(f"{exp_args['model_name']} {exp_args['dataset']}_dataset num_classes {exp_args['num_classes']} in_channels: {exp_args['in_channels']} spectrum_dim: {exp_args['spectrum_dim']}")
-        exp_dir_name = (f"{exp_args['model_name']}_{exp_args['dataset']}_dataset_num_classes_{exp_args['num_classes']}_in_channels_{exp_args['in_channels']}_"
-                        f"spectrum_dim_{exp_args['spectrum_dim']}_batch_size_{exp_args['batch_size']}")
-        exp_dir = os.path.join(
-            save_dir,
-            exp_dir_name
-        )
-
-    exp_name = f"{exp_args['model_name']}_train_{exp_args['dataset']}_dataset.pth"
-
-    if not os.path.exists(exp_dir):
-        os.makedirs(exp_dir)
-
-    model_summary = None
-    all_metrics_results = []
+    model = None
 
     X_train, y_train, X_test, y_test = prepare_dataset(
         exp_args=exp_args,
         label_mapping=label_mapping,
     )
 
-    if exp_args['is_normalization']:
+    if exp_args['use_normalization']:
         # Log transformation
         # print("Applying log transformation to X_train and X_test...")
         # X_train = log_transform(X_train)
@@ -158,116 +143,212 @@ def exp(exp_args, save_dir, label_mapping, device, use_multi_gpu=False):
 
         print("Normalization complete.")
 
-    X_train, y_train, X_valid, y_valid = split_dataset(
-        X_train,
-        y_train,
-        train_size=0.9,
-        test_size=0.1,
-    )
-
-    train_loader = DataLoader(
-        MassSpectraDataset(X_train, y_train),
-        batch_size=exp_args['batch_size'],
-        shuffle=True
-    )
-
-    valid_loader = DataLoader(
-        MassSpectraDataset(X_valid, y_valid),
-        batch_size=exp_args['batch_size'],
-        shuffle=False
-    )
-
-    test_loader = DataLoader(
-        MassSpectraDataset(X_test, y_test),
-        batch_size=exp_args['batch_size'],
-        shuffle=False
-    )
-
-    model = None
-
-    if 'ResNet' in exp_args['model_name']:
-        model = build_resnet_1d(exp_args)
-    elif 'DenseNet' in exp_args['model_name']:
-        model = build_densenet_1d(exp_args)
-    elif 'EfficientNet' in exp_args['model_name']:
-        model = build_efficientnet_1d(exp_args)
-
-    if use_multi_gpu and torch.cuda.device_count() > 1:
-        print(f'Using {torch.cuda.device_count()} GPUs for training.')
-        device = torch.device("cuda:0")  # set the main GPU as cuda:0
-        model = model.to(device)  # move the models to the main GPU
-        model = nn.DataParallel(model)  # wrap the models with DataParallel for multi-GPU support
-    else:
-        model = model.to(device)
-
-    class_weights = compute_class_weight('balanced', classes=list(label_mapping.values()), y=y_train)
-    class_weights = torch.tensor(class_weights, dtype=torch.float32, device=device)
-    criterion = nn.CrossEntropyLoss(weight=class_weights)
-
-    optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
-    optimizers = [optimizer]
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, min_lr=1e-32)
-    schedulers = [scheduler]
-
-    if exp_args['is_early_stopping']:
-        early_stopping = EarlyStopping(patience=exp_args['patience'])
-    else:
-        early_stopping = None
-
-    model_summary = summary(
-        model,
-        input_size=(
-            exp_args['batch_size'],
-            exp_args['spectrum_dim']
+    # Machine learning models
+    if exp_args['model_name'] in ['SVM', 'RandomForest', 'XGBoost']:
+        print(f"{exp_args['model_name']} {exp_args['dataset']}_dataset num_classes {exp_args['num_classes']}")
+        exp_dir_name = (f"{exp_args['model_name']}_{exp_args['dataset']}_dataset_num_classes_{exp_args['num_classes']}")
+        exp_dir = os.path.join(
+            save_dir,
+            exp_dir_name
         )
-    )
+        exp_model_name = f"{exp_args['model_name']}_train_{exp_args['dataset']}_dataset"
 
-    # save models summary to txt
-    with open(os.path.join(exp_dir, f"{exp_dir_name}_model_summary.txt"), 'w', encoding='utf-8') as file:
-        file.write(str(model_summary))
+        if not os.path.exists(exp_dir):
+            os.makedirs(exp_dir)
 
-    train(
-        model,
-        exp_dir,
-        exp_name,
-        train_loader,
-        valid_loader,
-        criterion,
-        optimizers,
-        schedulers,
-        early_stopping,
-        exp_args['epochs'],
-        device,
-        is_early_stopping=exp_args['is_early_stopping'],
-        is_metrics_visualization=True
-    )
+        if exp_args['model_name'] == 'SVM':
+            model = SVC(kernel='rbf', probability=True, random_state=3407)
+        elif exp_args['model_name'] == 'RandomForest':
+            model = RandomForestClassifier(n_estimators=10, random_state=3407)
+        elif exp_args['model_name'] == 'XGBoost':
+            model = XGBClassifier(n_estimators=10, random_state=3407)
 
-    accuracy, precision, recall, f1_score = test(
-        model,
-        exp_dir,
-        exp_name,
-        test_loader,
-        criterion,
-        label_mapping,
-        device,
-        metric_args=None,
-        is_metrics_visualization=True
-    )
+        accuracy, precision, recall, f1_score = train_test_ml(
+            exp_dir=exp_dir,
+            exp_model_name=exp_model_name,
+            model=model,
+            train_set=(X_train, y_train),
+            test_set=(X_test, y_test),
+            label_mapping=label_mapping,
+            metrics_visualization=True
+        )
 
-    metrics_result = {
-        'Accuracy': accuracy,
-        'Precision': precision,
-        'Recall': recall,
-        'F1 Score': f1_score
-    }
+        metrics_result = {
+            'Accuracy': accuracy,
+            'Precision': precision,
+            'Recall': recall,
+            'F1 Score': f1_score
+        }
 
-    # Save metrics to CSV using pandas
-    time_stamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    csv_file = os.path.join(exp_dir, f"{exp_dir_name}_metrics_{time_stamp}.csv")
-    df = pd.DataFrame([metrics_result])
-    df.to_csv(csv_file, index=False)
+        # Save metrics to CSV using pandas
+        time_stamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        csv_file = os.path.join(exp_dir, f"{exp_dir_name}_metrics_{time_stamp}.csv")
+        df = pd.DataFrame([metrics_result])
+        df.to_csv(csv_file, index=False)
 
-    return exp_dir, exp_name, metrics_result
+        return exp_dir, exp_model_name, metrics_result
+    # Deep learning models
+    else:
+        if 'Embedding' in exp_args['model_name']:
+            print(
+                f"{exp_args['model_name']} {exp_args['dataset']}_dataset num_classes {exp_args['num_classes']} "
+                f"in_channels: {exp_args['in_channels']} spectrum_dim: {exp_args['spectrum_dim']} "
+                f"embedding_channels: {exp_args['embedding_channels']} embedding_dim: {exp_args['embedding_dim']}"
+            )
+            exp_dir_name = (
+                f"{exp_args['model_name']}_{exp_args['dataset']}_dataset_num_classes_{exp_args['num_classes']}_"
+                f"in_channels_{exp_args['in_channels']}_spectrum_dim_{exp_args['spectrum_dim']} "
+                f"embedding_channels_{exp_args['embedding_channels']}_embedding_dim_{exp_args['embedding_dim']}_batch_size_{exp_args['batch_size']}"
+            )
+            exp_dir = os.path.join(
+                save_dir,
+                exp_dir_name
+            )
+
+        else:
+            print(
+                f"{exp_args['model_name']} {exp_args['dataset']}_dataset num_classes {exp_args['num_classes']} "
+                f"in_channels: {exp_args['in_channels']} spectrum_dim: {exp_args['spectrum_dim']}"
+            )
+            exp_dir_name = (
+                f"{exp_args['model_name']}_{exp_args['dataset']}_dataset_num_classes_{exp_args['num_classes']}_"
+                f"in_channels_{exp_args['in_channels']}_spectrum_dim_{exp_args['spectrum_dim']}_batch_size_{exp_args['batch_size']}")
+            exp_dir = os.path.join(
+                save_dir,
+                exp_dir_name
+            )
+
+        exp_model_name = f"{exp_args['model_name']}_train_{exp_args['dataset']}_dataset"
+
+        if not os.path.exists(exp_dir):
+            os.makedirs(exp_dir)
+
+        X_train, y_train, X_valid, y_valid = split_dataset(
+            X_train,
+            y_train,
+            train_size=0.9,
+            test_size=0.1,
+        )
+
+        train_loader = DataLoader(
+            MassSpectraDataset(X_train, y_train),
+            batch_size=exp_args['batch_size'],
+            shuffle=True
+        )
+
+        valid_loader = DataLoader(
+            MassSpectraDataset(X_valid, y_valid),
+            batch_size=exp_args['batch_size'],
+            shuffle=False
+        )
+
+        test_loader = DataLoader(
+            MassSpectraDataset(X_test, y_test),
+            batch_size=exp_args['batch_size'],
+            shuffle=False
+        )
+
+        if 'ResNet' in exp_args['model_name']:
+            model = build_resnet_1d(exp_args)
+        elif 'DenseNet' in exp_args['model_name']:
+            model = build_densenet_1d(exp_args)
+        elif 'EfficientNet' in exp_args['model_name']:
+            model = build_efficientnet_1d(exp_args)
+        elif 'LSTM' in exp_args['model_name']:
+            model = build_lstm(exp_args)
+        elif 'Transformer' in exp_args['model_name']:
+            model = build_transformer(exp_args)
+
+        if use_multi_gpu and torch.cuda.device_count() > 1:
+            print(f'Using {torch.cuda.device_count()} GPUs for training.')
+            device = torch.device("cuda:0")  # set the main GPU as cuda:0
+            model = model.to(device)  # move the models to the main GPU
+            model = nn.DataParallel(model)  # wrap the models with DataParallel for multi-GPU support
+        else:
+            model = model.to(device)
+
+        class_weights = compute_class_weight('balanced', classes=list(label_mapping.values()), y=y_train)
+        class_weights = torch.tensor(class_weights, dtype=torch.float32, device=device)
+        criterion = nn.CrossEntropyLoss(weight=class_weights)
+
+        optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
+        optimizers = [optimizer]
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, min_lr=1e-32)
+        schedulers = [scheduler]
+
+        if exp_args['use_early_stopping']:
+            early_stopping = EarlyStopping(patience=exp_args['patience'])
+        else:
+            early_stopping = None
+
+        model_summary = summary(
+            model,
+            input_size=(
+                exp_args['batch_size'],
+                exp_args['spectrum_dim']
+            )
+        )
+
+        # save models summary to txt
+        with open(os.path.join(exp_dir, f"{exp_dir_name}_model_summary.txt"), 'w', encoding='utf-8') as file:
+            file.write(str(model_summary))
+
+        if not use_multi_gpu:
+            flops, params = profile(
+                model,
+                inputs=(torch.randn(1, exp_args['spectrum_dim']).to(device),)
+            )
+            flops_str = f'{flops / 1e9:.2f} GFLOPs'
+            params_str = f'{params / 1e6:.2f}M Params'
+            print(f"FLOPs: {flops_str}")
+            print(f"Parameters: {params_str}")
+            with open(os.path.join(exp_dir, f"{exp_dir_name}_model_flops_params.txt"), 'w', encoding='utf-8') as file:
+                file.write(f"FLOPs: {flops_str}\n")
+                file.write(f"Params: {params_str}\n")
+
+        time.sleep(100000000)
+
+        train(
+            exp_dir=exp_dir,
+            exp_model_name=exp_model_name,
+            model=model,
+            train_loader=train_loader,
+            valid_loader=valid_loader,
+            criterion=criterion,
+            optimizers=optimizers,
+            schedulers=schedulers,
+            early_stopping=early_stopping,
+            epochs=exp_args['epochs'],
+            device=device,
+            use_early_stopping=exp_args['use_early_stopping'],
+            metrics_visualization=True
+        )
+
+        accuracy, precision, recall, f1_score = test(
+            exp_dir=exp_dir,
+            exp_model_name=exp_model_name,
+            model=model,
+            test_loader=test_loader,
+            criterion=criterion,
+            label_mapping=label_mapping,
+            device=device,
+            metrics_visualization=True
+        )
+
+        metrics_result = {
+            'Accuracy': accuracy,
+            'Precision': precision,
+            'Recall': recall,
+            'F1 Score': f1_score
+        }
+
+        # Save metrics to CSV using pandas
+        time_stamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        csv_file = os.path.join(exp_dir, f"{exp_dir_name}_metrics_{time_stamp}.csv")
+        df = pd.DataFrame([metrics_result])
+        df.to_csv(csv_file, index=False)
+
+        return exp_dir, exp_model_name, metrics_result
 
 
 def main():
@@ -290,9 +371,9 @@ def main():
     parser.add_argument('--epochs', type=int, default=64, help='Number of epochs')
     parser.add_argument('--device', type=str, default=None, help='Device to use')
     parser.add_argument('--use_multi_gpu', action='store_true', help='Use multiple GPUs')
-    parser.add_argument('--is_augmentation', action='store_true', help='Use augmentation')
-    parser.add_argument('--is_normalization', action='store_true', help='Use normalization')
-    parser.add_argument('--is_early_stopping', action='store_true', help='Use early stopping')
+    parser.add_argument('--use_augmentation', action='store_true', help='Use augmentation')
+    parser.add_argument('--use_normalization', action='store_true', help='Use normalization')
+    parser.add_argument('--use_early_stopping', action='store_true', help='Use early stopping')
     parser.add_argument('--patience', type=int, default=20, help='Early stopping patience')
 
     args = parser.parse_args()
@@ -302,7 +383,7 @@ def main():
     else:
         device = torch.device(args.device)
 
-    if args.is_early_stopping:
+    if args.use_early_stopping:
         if args.patience is None:
             args.patience = 10
 
@@ -352,8 +433,6 @@ def main():
         'rcc': {'Control': 0, 'RCC': 1},
     }
 
-    label_mapping = None
-
     if 'canine_sarcoma' in args.dataset:
         label_mapping = label_mappings[f'canine_sarcoma_{args.num_classes}']
     elif 'microorganisms' in args.dataset:
@@ -383,9 +462,9 @@ def main():
         'num_classes': args.num_classes,
         'batch_size': args.batch_size,
         'epochs': args.epochs,
-        'is_augmentation': args.is_augmentation,
-        'is_normalization': args.is_normalization,
-        'is_early_stopping': args.is_early_stopping,
+        'use_augmentation': args.use_augmentation,
+        'use_normalization': args.use_normalization,
+        'use_early_stopping': args.use_early_stopping,
         'patience': args.patience,
         'random_seed': 3407,
     }
@@ -400,14 +479,20 @@ def main():
 
     # metrics_statistics = calculate_metrics_statistics(metrics_results)
 
-    if 'Embedding' in exp_args['model_name']:
-        print(f"{exp_args['model_name']} {args.dataset} in_channels: {exp_args['in_channels']}, spectrum_dim: {exp_args['spectrum_dim']}, "
-              f"embedding_channels: {exp_args['embedding_channels']}, embedding_dim: {exp_args['embedding_dim']}, num_classes: {exp_args['num_classes']}, "
-              f"batch_size: {exp_args['batch_size']}, epochs: {exp_args['epochs']}")
-
+    if exp_args['model_name'] in ['SVM', 'RandomForest', 'XGBoost']:
+        print(f"{exp_args['model_name']} {args.dataset} num_classes: {exp_args['num_classes']}")
     else:
-        print(f"{exp_args['model_name']} {args.dataset} in_channels: {exp_args['in_channels']}, spectrum_dim: {exp_args['spectrum_dim']}, num_classes: {exp_args['num_classes']}, "
-              f"batch_size: {exp_args['batch_size']}, epochs: {exp_args['epochs']}")
+        if 'Embedding' in exp_args['model_name']:
+            print(
+                f"{exp_args['model_name']} {args.dataset} in_channels: {exp_args['in_channels']}, spectrum_dim: {exp_args['spectrum_dim']}, "
+                f"embedding_channels: {exp_args['embedding_channels']}, embedding_dim: {exp_args['embedding_dim']}, num_classes: {exp_args['num_classes']}, "
+                f"batch_size: {exp_args['batch_size']}, epochs: {exp_args['epochs']}"
+            )
+        else:
+            print(
+                f"{exp_args['model_name']} {args.dataset} in_channels: {exp_args['in_channels']}, spectrum_dim: {exp_args['spectrum_dim']}, num_classes: {exp_args['num_classes']}, "
+                f"batch_size: {exp_args['batch_size']}, epochs: {exp_args['epochs']}"
+            )
 
     for metric, result in metrics_results.items():
         print(f'{metric}: {result:.4f}')
@@ -415,15 +500,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-
-
-
-
-
-
