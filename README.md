@@ -6,13 +6,7 @@
 [//]: # ([Classification Method for Mass Spectrometry Using Deep Multi-Channel Embedded Representation Integrated with Convolutional Neural Networks]&#40;https://arxiv.org/abs/2012.07436&#41;.)
 
 ## Abstract
-Mass spectrometry analysis plays a critical role in the biomedical field. 
-However, the high dimensionality and complexity of mass spectrometry data present significant challenges for effective feature extraction and classification. 
-Deep learning has become a dominant approach in data analysis, yet many existing methods for mass spectrometry data are limited in their feature representation capabilities. 
-These methods often rely on single-channel representations, which are insufficient for capturing the deep and intricate information within mass spectrometry vectors. 
-To address these limitations, we proposes a `deep learning-based multi-channel embedding representation method for mass spectrometry. 
-This approach combines multilayer perceptron and convolutional neural network and performing embedding concatenation along the channel dimension to substantially enhance enhances the representation capability of mass spectrometry features. 
-Experimental results on five public datasets demonstrate that the proposed method not only achieves significant improvements in classification performance but also reduces GPU memory usage and improves training efficiency, highlighting its effectiveness and generalizability in mass spectrometry data analysis.
+Mass spectrometry (MS) analysis plays a crucial role in the biomedical field; however, the high dimensionality and complexity of MS data pose significant challenges for feature extraction and classification. Deep learning has become a dominant approach in data analysis, and while some deep learning methods have achieved progress in MS classification, their feature representation capabilities remain limited. Most existing methods rely on single-channel representations, which struggle to effectively capture the structural information within MS data. To address these limitations, we propose a Multi-Channel Embedding Representation Module (MSMCE), which focuses on modeling inter-channel dependencies to generate multi-channel representations of raw MS data. Additionally, we introduce a “residual” connection along the channel dimension, significantly enhancing the classification performance of subsequent models. Experimental results on four public datasets demonstrate that the proposed MSMCE module not only achieves substantial improvements in classification performance but also reduces computational resource consumption and enhances training efficiency, highlighting its effectiveness and generalizability in raw MS data classification.
 
 ## Requirements
 
@@ -28,10 +22,6 @@ Dependencies can be installed using the following command:
 ```bash
 pip install -r requirements.txt
 ```
-or
-```bash
-conda env create -f environment.yml
-```
 
 ## Data
 The required data files should be put into `datasets/` folder. Note that the input of each dataset is tic normalized in this implementation.
@@ -40,23 +30,21 @@ The MS raw data can be downloaded from the source and the processed data can be 
 - [Google Drive](https://drive.google.com/drive/folders/16CIJCkPArsCuJrTgT7Y20jWUpHtflFNH?usp=sharing)
 
 ## Usage
-Commands for training and testing the model with *MCE* on Dataset NSCLC, CRLM, RCC and Canine Sarcoma, Microorganisms respectively:
+Commands for training and testing the model with *MCE* on Dataset NSCLC, CRLM, RCC and Canine Sarcoma respectively:
 
 ```bash
 # NSCLC
-python exp_mass_spectra_multi_channel_embedding.py --model_name MultiChannelEmbeddingResNet50 --dataset nsclc --num_classes 12 --in_channels 1 --spectrum_dim 15000 --embedding_channels 256 --embedding_dim 1024 --device cuda:0 --batch_size 128 --epochs 64 --patience 20 --is_normalization
+python exp_mass_spectra_multi_channel_embedding.py --model_name MultiChannelEmbeddingResNet50 --dataset nsclc --num_classes 12 --in_channels 1 --spectrum_dim 15000 --embedding_channels 256 --embedding_dim 1024 --device cuda:0 --batch_size 128 --epochs 64 --use_normalization
 
 # CRLM
-python exp_mass_spectra_multi_channel_embedding.py --model_name MultiChannelEmbeddingResNet50 --dataset crlm --num_classes 12 --in_channels 1 --spectrum_dim 15000 --embedding_channels 256 --embedding_dim 1024 --device cuda:0 --batch_size 128 --epochs 64 --patience 20 --is_normalization
+python exp_mass_spectra_multi_channel_embedding.py --model_name MultiChannelEmbeddingResNet50 --dataset crlm --num_classes 12 --in_channels 1 --spectrum_dim 15000 --embedding_channels 256 --embedding_dim 1024 --device cuda:0 --batch_size 128 --epochs 64 --use_normalization
   
 # RCC
-python exp_mass_spectra_multi_channel_embedding.py --model_name MultiChannelEmbeddingResNet50 --dataset rcc_posion --num_classes 12 --in_channels 1 --spectrum_dim 15000 --embedding_channels 256 --embedding_dim 1024 --device cuda:0 --batch_size 128 --epochs 64 --patience 20 --is_normalization 
+python exp_mass_spectra_multi_channel_embedding.py --model_name MultiChannelEmbeddingResNet50 --dataset rcc_posion --num_classes 12 --in_channels 1 --spectrum_dim 15000 --embedding_channels 256 --embedding_dim 1024 --device cuda:0 --batch_size 128 --epochs 64 --use_normalization 
 
 # Canine Sarcoma
-python exp_mass_spectra_multi_channel_embedding.py --model_name MultiChannelEmbeddingResNet50 --dataset canine_sarcoma_posion --num_classes 12 --in_channels 1 --spectrum_dim 15000 --embedding_channels 256 --embedding_dim 1024 --device cuda:0 --batch_size 32 --epochs 64 --patience 20 --is_normalization 
+python exp_mass_spectra_multi_channel_embedding.py --model_name MultiChannelEmbeddingResNet50 --dataset canine_sarcoma_posion --num_classes 12 --in_channels 1 --spectrum_dim 15000 --embedding_channels 256 --embedding_dim 1024 --device cuda:0 --batch_size 32 --epochs 64 --use_normalization 
 
-# Microorganisms
-python exp_mass_spectra_multi_channel_embedding.py --model_name MultiChannelEmbeddingResNet50 --dataset microorganisms --num_classes 5 --in_channels 1 --spectrum_dim 19000 --embedding_channels 256 --embedding_dim 1024 --device cuda:0 --batch_size 8 --epochs 64 --patience 20 --is_normalization 
 ```
 
 More parameter information please refer to `exp_mass_spectra_multi_channel_embedding.py`.
@@ -67,7 +55,7 @@ We provide a more detailed and complete command description for training and tes
 python exp_mass_spectra_multi_channel_embedding.py --root_dir <root_dir> --save_dir <save_dir> --model_name <model> --dataset <dataset> \
 --in_channels <in_channels> --spectrum_dim <spectrum_dim> --bin_size <bin_size> --rt_binning_window <rt_binning_window> \
 --embedding_channels <embedding_channels> --embedding_dim <embedding_dim> --num_classes <num_classes> --batch_size <batch_size> \
---epochs <epochs> --device <cuda:x> --use_multi_gpu --is_augmentation --is_normalization --is_early_stopping --patience <patience>\ 
+--epochs <epochs> --device <cuda:x> --use_multi_gpu --use_normalization --use_augmentation --use_early_stopping --patience <patience>\ 
 ```
 
 The detailed descriptions about the arguments are as following:
@@ -89,7 +77,7 @@ The detailed descriptions about the arguments are as following:
 | epochs             | Number of training epochs (default: `64`).                                                                                                                                                |
 | device             | Device to use for training (e.g., cpu, cuda, default: None, which auto-selects based on hardware).                                                                                        |
 | use_multi_gpu      | Flag to enable training on multiple GPUs.                                                                                                                                                 |
-| is_augmentation    | Flag to enable data augmentation during training.                                                                                                                                         |
-| is_normalization   | Flag to enable normalization of the input data.                                                                                                                                           |
-| is_early_stopping  | Flag to enable early stopping based on validation performance.                                                                                                                            |
+| use_augmentation   | Flag to enable data augmentation during training.                                                                                                                                         |
+| use_normalization  | Flag to enable normalization of the input data.                                                                                                                                           |
+| use_early_stopping | Flag to enable early stopping based on validation performance.                                                                                                                            |
 | patience           | Number of epochs to wait before early stopping (default: `20`).                                                                                                                           |
