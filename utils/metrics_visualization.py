@@ -7,7 +7,7 @@ from datetime import datetime
 from utils.metrics import compute_confusion_matrix, compute_roc_auc
 
 
-def plot_metrics(metrics, titles, plot_title, save_dir):
+def plot_metrics(save_dir, plot_title, metrics, titles):
     n = len(metrics)
     plt.figure(figsize=(15, 5 * (n // 2 + n % 2)))
     for i, (train_metrics, valid_metrics) in enumerate(metrics):
@@ -22,7 +22,7 @@ def plot_metrics(metrics, titles, plot_title, save_dir):
     plt.tight_layout(rect=[0, 0, 1, 0.96])
 
     time_stamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    metrics_file_path = os.path.join(save_dir, f"{plot_title.split('.')[0]}_train_valid_metrics_plot_{time_stamp}.png")
+    metrics_file_path = os.path.join(save_dir, f"{plot_title}_train_valid_metrics_plot_{time_stamp}.png")
     plt.savefig(metrics_file_path)
     plt.show()
     plt.close()
@@ -78,7 +78,7 @@ def plot_roc_auc_curve(targets, predicts, label_mapping, plot_title, save_dir):
     plt.legend(loc='lower right')
 
     time_stamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    roc_auc_file_path = os.path.join(save_dir, f"{plot_title.split('.')[0]}_roc_auc_plot_{time_stamp}.png")
+    roc_auc_file_path = os.path.join(save_dir, f"{plot_title}_roc_auc_plot_{time_stamp}.png")
     plt.savefig(roc_auc_file_path)
     plt.show()
     plt.close()
