@@ -30,7 +30,7 @@ The MS raw data can be downloaded from the source and the processed data can be 
 - [Google Drive](https://drive.google.com/drive/folders/16CIJCkPArsCuJrTgT7Y20jWUpHtflFNH?usp=sharing)
 
 ## Usage
-Commands for training and testing the model with *MCE* on Dataset NSCLC, CRLM, RCC and Canine Sarcoma respectively:
+Commands for training and testing the model with *MSMCE* on Dataset NSCLC, CRLM, RCC and Canine Sarcoma respectively:
 
 ```bash
 # NSCLC
