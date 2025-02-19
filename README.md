@@ -1,9 +1,6 @@
-# MSMCE: Classification Method for Mass Spectrometry Using Deep Multi-Channel Embedded Representation Integrated with Convolutional Neural Networks
+# MSMCE: A Novel Representation Module for Classification of Raw Mass Spectrometry Data
 ![Python 3.8](https://img.shields.io/badge/python-3.8-green.svg?style=plastic)
 ![PyTorch](https://img.shields.io/badge/PyTorch%20-%23EE4C2C.svg?style=plastic)
-
-[//]: # (This is the origin Pytorch implementation of MCE &#40;Multi Channel Embedding&#41; in the following paper: )
-[//]: # ([Classification Method for Mass Spectrometry Using Deep Multi-Channel Embedded Representation Integrated with Convolutional Neural Networks]&#40;https://arxiv.org/abs/2012.07436&#41;.)
 
 ## Abstract
 Mass spectrometry (MS) analysis plays a crucial role in the biomedical field; however, the high dimensionality and complexity of MS data pose significant challenges for feature extraction and classification. Deep learning has become a dominant approach in data analysis, and while some deep learning methods have achieved progress in MS classification, their feature representation capabilities remain limited. Most existing methods rely on single-channel representations, which struggle to effectively capture the structural information within MS data. To address these limitations, we propose a Multi-Channel Embedding Representation Module (MSMCE), which focuses on modeling inter-channel dependencies to generate multi-channel representations of raw MS data. Additionally, we introduce a “residual” connection along the channel dimension, significantly enhancing the classification performance of subsequent models. Experimental results on four public datasets demonstrate that the proposed MSMCE module not only achieves substantial improvements in classification performance but also reduces computational resource consumption and enhances training efficiency, highlighting its effectiveness and generalizability in raw MS data classification.
@@ -60,24 +57,24 @@ python exp_mass_spectra_multi_channel_embedding.py --root_dir <root_dir> --save_
 
 The detailed descriptions about the arguments are as following:
 
-| Parameter name     | Description of parameter                                                                                                                                                                  |
-|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| root_dir           | Root directory of the project (default: `../`).                                                                                                                                           |
-| save_dir           | Directory to save model checkpoints.                                                                                                                                                      |
-| model_name         | Name of the model to use. This can be set to `MultiChannelEmbeddingResNet18`, `MultiChannelEmbeddingResNet50`, `MultiChannelEmbeddingDenseNet121`, `MultiChannelEmbeddingEfficientNetB0`. |
-| dataset            | Name of the dataset to use (required).                                                                                                                                                    |
-| in_channels        | Number of input channels for the model (default: `1`).                                                                                                                                    |
-| spectrum_dim       | Spectrum dimension of the input data.                                                                                                                                                     |
-| bin_size           | Size of bins for spectrum data (default: `0.1`).                                                                                                                                          |
-| rt_binning_window  | Retention time binning window size (default: `10`).                                                                                                                                       |
-| embedding_channels | Number of embedding channels (default: `256`).                                                                                                                                            |
-| embedding_dim      | Dimension of the embedding vector (default: `256`).                                                                                                                                       |
-| num_classes        | Number of classes in the dataset.                                                                                                                                                         |
-| batch_size         | Size of each training batch.                                                                                                                                                              |
-| epochs             | Number of training epochs (default: `64`).                                                                                                                                                |
-| device             | Device to use for training (e.g., cpu, cuda, default: None, which auto-selects based on hardware).                                                                                        |
-| use_multi_gpu      | Flag to enable training on multiple GPUs.                                                                                                                                                 |
-| use_augmentation   | Flag to enable data augmentation during training.                                                                                                                                         |
-| use_normalization  | Flag to enable normalization of the input data.                                                                                                                                           |
-| use_early_stopping | Flag to enable early stopping based on validation performance.                                                                                                                            |
-| patience           | Number of epochs to wait before early stopping (default: `20`).                                                                                                                           |
+| Parameter name     | Description of parameter                                                                                                                   |
+|--------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| root_dir           | Root directory of the project (default: `../`).                                                                                            |
+| save_dir           | Directory to save model checkpoints.                                                                                                       |
+| model_name         | Name of the model to use. This can be set to `ResNet50`, `DenseNet121`, `EfficientNetB0`, `LSTM`, `Transformer`, `MultiChannelEmbedding~`. |
+| dataset            | Name of the dataset to use (required).                                                                                                     |
+| in_channels        | Number of input channels for the model (default: `1`).                                                                                     |
+| spectrum_dim       | Spectrum dimension of the input data.                                                                                                      |
+| bin_size           | Size of bins for spectrum data (default: `0.1`).                                                                                           |
+| rt_binning_window  | Retention time binning window size (default: `10`second).                                                                                  |
+| embedding_channels | Number of embedding channels (default: `256`).                                                                                             |
+| embedding_dim      | Dimension of the embedding vector (default: `256`).                                                                                        |
+| num_classes        | Number of classes in the dataset.                                                                                                          |
+| batch_size         | Size of each training batch.                                                                                                               |
+| epochs             | Number of training epochs (default: `64`).                                                                                                 |
+| device             | Device to use for training (e.g., cpu, cuda, default: None, which auto-selects based on hardware).                                         |
+| use_multi_gpu      | Flag to enable training on multiple GPUs.                                                                                                  |
+| use_augmentation   | Flag to enable data augmentation during training.                                                                                          |
+| use_normalization  | Flag to enable normalization of the input data.                                                                                            |
+| use_early_stopping | Flag to enable early stopping based on validation performance.                                                                             |
+| patience           | Number of epochs to wait before early stopping (default: `20`).                                                                            |
