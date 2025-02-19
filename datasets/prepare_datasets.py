@@ -8,7 +8,6 @@ from utils.file_split import (
 )
 from utils.data_loader import (
     load_canine_sarcoma_mzml,
-    load_microorganisms_mzml,
     load_nsclc_mzml,
     load_crlm_mzml,
     load_rcc_mzml,
@@ -79,49 +78,6 @@ def prepare_canine_sarcoma_dataset(exp_args, label_mapping):
         y=labels,
         train_size=0.9,
         test_size=0.1,
-        random_seed=exp_args['random_seed']
-    )
-
-    bin_dataset_dir = os.path.join(exp_args['root_dir'], exp_args['dataset_dir'].replace('raw', f"bin/bin_{exp_args['bin_size']}"))
-
-    if os.path.exists(bin_dataset_dir) is False:
-        os.makedirs(bin_dataset_dir)
-
-    bin_train_dataset_path = f"{bin_dataset_dir}/{exp_args['dataset']}_classes_{exp_args['num_classes']}_bin_{exp_args['bin_size']}_train.pkl"
-    bin_test_dataset_path = f"{bin_dataset_dir}/{exp_args['dataset']}_classes_{exp_args['num_classes']}_bin_{exp_args['bin_size']}_test.pkl"
-    save_bin_mass_spec_data_to_pickle(bin_train_dataset_path, bin_mz_array, X_train, y_train)
-    save_bin_mass_spec_data_to_pickle(bin_test_dataset_path, bin_mz_array, X_test, y_test)
-
-    return X_train, y_train, X_test, y_test
-
-
-def prepare_microorganisms_dataset(exp_args, label_mapping):
-    """
-    Prepare the Canine Sarcoma dataset.
-     - Mass ranges: 100-2000 Da
-     - bin size: 0.1 Da
-     - dimension: 19000
-    """
-    microorganisms_file_paths = get_file_paths(exp_args['root_dir'], exp_args['dataset_dir'], suffix='mzML')
-    mz_arrays, intensity_arrays, labels = load_microorganisms_mzml(
-        file_paths=microorganisms_file_paths,
-        label_mapping=label_mapping,
-        num_classes=exp_args['num_classes']
-    )
-
-    bin_mz_array, bin_intensity_matrix = bin_spectra(
-        mz_arrays=mz_arrays,
-        intensity_arrays=intensity_arrays,
-        min_mz=100.0,
-        max_mz=2000.0,
-        bin_size=exp_args['bin_size']
-    )
-
-    X_train, y_train, X_test, y_test = split_dataset(
-        X=bin_intensity_matrix,
-        y=labels,
-        train_size=0.8,
-        test_size=0.2,
         random_seed=exp_args['random_seed']
     )
 
