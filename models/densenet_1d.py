@@ -162,7 +162,7 @@ class DenseNet1D(nn.Module):
 class EmbeddingDenseNet1D(DenseNet1D):
 
     def __init__(self, densenet_variant, growth_rate, compression_factor, in_channels, embedding_channels, num_classes, embedding_type=None, embedding_module=None):
-        super().__init__(densenet_variant, growth_rate, compression_factor, in_channels, num_classes)
+        super().__init__(densenet_variant=densenet_variant, growth_rate=growth_rate, compression_factor=compression_factor, in_channels=in_channels, num_classes=num_classes)
 
         self.embedding_type = embedding_type
         self.embedding_module = embedding_module
@@ -193,7 +193,7 @@ class EmbeddingDenseNet1D(DenseNet1D):
 
                 return x
         else:
-            return super().forward(x)
+            raise ValueError("Invalid embedding type or module")
 
 
 def build_densenet_1d(model_args):
