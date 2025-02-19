@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 
-import math
-
 from models.embedding.learnable_embedding import MultiChannelEmbedding
 
 
@@ -171,7 +169,7 @@ class ResNet1D(nn.Module):
         Attributes:
             Layer consisting of conv->batchnorm->relu
         """
-        super(ResNet1D, self).__init__()
+        super().__init__()
 
         self.channels_list = resnet_variant[0]
         self.repetition_list = resnet_variant[1]
@@ -254,7 +252,7 @@ class ResNet1D(nn.Module):
 class EmbeddingResNet1D(ResNet1D):
 
     def __init__(self, resnet_variant, in_channels, embedding_channels, num_classes, embedding_type=None, embedding_module=None):
-        super(EmbeddingResNet1D, self).__init__(resnet_variant, in_channels, num_classes)
+        super().__init__(resnet_variant=resnet_variant, in_channels=in_channels, num_classes=num_classes)
 
         self.embedding_type = embedding_type
         self.embedding_module = embedding_module
@@ -286,7 +284,7 @@ class EmbeddingResNet1D(ResNet1D):
 
                 return x
         else:
-            return super().forward(x)
+            raise ValueError("Invalid embedding type or module")
 
 
 def build_resnet_1d(model_args):
