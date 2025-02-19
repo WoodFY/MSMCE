@@ -86,7 +86,7 @@ class MBConvBlock1D(nn.Module):
 class EfficientNet1D(nn.Module):
 
     def __init__(self, in_channels, num_classes, width_coefficient=1.0, depth_coefficient=1.0, dropout_rate=0.2):
-        super(EfficientNet1D, self).__init__()
+        super().__init__()
 
         self.width_coefficient = width_coefficient
         self.depth_coefficient = depth_coefficient
@@ -190,7 +190,7 @@ class EfficientNet1D(nn.Module):
 class EmbeddingEfficientNet1D(EfficientNet1D):
 
     def __init__(self, in_channels, embedding_channels, num_classes, width_coefficient=1.0, depth_coefficient=1.0, dropout_rate=0.2, embedding_type=None, embedding_module=None):
-        super().__init__(in_channels, num_classes, width_coefficient, depth_coefficient, dropout_rate)
+        super().__init__(in_channels=in_channels, num_classes=num_classes, width_coefficient=width_coefficient, depth_coefficient=depth_coefficient, dropout_rate=dropout_rate)
 
         self.embedding_type = embedding_type
         self.embedding_module = embedding_module
@@ -217,7 +217,7 @@ class EmbeddingEfficientNet1D(EfficientNet1D):
 
                 return x
         else:
-            return super().forward(x)
+            raise ValueError("Invalid embedding type or module")
 
 
 def build_efficientnet_1d(model_args):
