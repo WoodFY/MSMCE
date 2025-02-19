@@ -237,50 +237,6 @@ def load_canine_sarcoma_mzml(file_paths, label_mapping, num_classes):
     return total_mz_arrays, total_intensity_arrays, labels
 
 
-def load_microorganisms_mzml(file_paths, label_mapping, num_classes):
-
-    # classes 3
-    if num_classes == 3:
-        def get_label_from_path(file_path):
-            dir_name = os.path.basename(os.path.dirname(file_path))
-
-            if dir_name in ['E. coli D31', 'Pseudomonas aeruginosa']:
-                return 'Gram negative'
-            elif dir_name in ['Staphylococcus aureus', 'Enterococcus faecalis']:
-                return 'Gram positive'
-            elif dir_name in ['Candida albicans']:
-                return 'Yeast'
-            else:
-                raise ValueError(f"Unknown label in file path: {file_path}")
-    # classes 5
-    elif num_classes == 5:
-        def get_label_from_path(file_path):
-            dir_name = os.path.basename(os.path.dirname(file_path))
-
-            if dir_name in ['E. coli D31', 'Pseudomonas aeruginosa', 'Staphylococcus aureus', 'Enterococcus faecalis', 'Candida albicans']:
-                return dir_name
-            else:
-                raise ValueError(f"Unknown label in file path: {file_path}")
-    else:
-        raise ValueError(f"Invalid number of classes: {num_classes}")
-
-    total_mz_arrays = []
-    total_intensity_arrays = []
-    labels = []
-
-    for file_path in file_paths:
-        label = get_label_from_path(file_path)
-        mapped_label = label_mapping[label]
-
-        mz_arrays, intensity_arrays = read_mzml(file_path, tic_threshold=1e4)
-
-        total_mz_arrays.extend(mz_arrays)
-        total_intensity_arrays.extend(intensity_arrays)
-        labels.extend([mapped_label] * len(mz_arrays))
-
-    return total_mz_arrays, total_intensity_arrays, labels
-
-
 def load_nsclc_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binning_window):
 
     def get_label_from_path(file_path):
