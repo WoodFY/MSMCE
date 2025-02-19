@@ -28,7 +28,6 @@ from models.transformer import build_transformer
 from datasets.prepare_datasets import (
     load_bin_mass_spec_data_from_pickle,
     prepare_canine_sarcoma_dataset,
-    prepare_microorganisms_dataset,
     prepare_nsclc_dataset,
     prepare_crlm_dataset,
     prepare_rcc_dataset,
@@ -43,7 +42,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1, 2, 3"
 
 def get_bin_dataset_path(exp_args):
 
-    if exp_args['dataset'] in ['canine_sarcoma_posion', 'microorganisms']:
+    if exp_args['dataset'] in ['canine_sarcoma_posion']:
         bin_dataset_dir = os.path.join(exp_args['root_dir'], exp_args['dataset_dir'].replace('raw', f"bin/bin_{exp_args['bin_size']}"))
 
         if os.path.exists(bin_dataset_dir) is False:
@@ -89,11 +88,6 @@ def prepare_dataset(exp_args, label_mapping):
 
         if exp_args['dataset'] == 'canine_sarcoma_posion':
             X_train, y_train, X_test, y_test = prepare_canine_sarcoma_dataset(
-                exp_args=exp_args,
-                label_mapping=label_mapping,
-            )
-        elif exp_args['dataset'] == 'microorganisms':
-            X_train, y_train, X_test, y_test = prepare_microorganisms_dataset(
                 exp_args=exp_args,
                 label_mapping=label_mapping,
             )
@@ -306,8 +300,6 @@ def exp(exp_args, save_dir, label_mapping, device, use_multi_gpu=False):
                 file.write(f"FLOPs: {flops_str}\n")
                 file.write(f"Params: {params_str}\n")
 
-        time.sleep(100000000)
-
         train(
             exp_dir=exp_dir,
             exp_model_name=exp_model_name,
@@ -416,18 +408,6 @@ def main():
             'Soft tissue sarcoma': 10,
             'Gastrointestinal stromal sarcoma': 11
         },
-        'microorganisms_3': {
-            'Gram negative': 0,
-            'Gram positive': 1,
-            'Yeast': 2
-        },
-        'microorganisms_5': {
-            'Staphylococcus aureus': 0,
-            'E. coli D31': 1,
-            'Pseudomonas aeruginosa': 2,
-            'Enterococcus faecalis': 3,
-            'Candida albicans': 4
-        },
         'nsclc': {'ADC': 0, 'SCC': 1},
         'crlm': {'Control': 0, 'CRLM': 1},
         'rcc': {'Control': 0, 'RCC': 1},
@@ -435,8 +415,6 @@ def main():
 
     if 'canine_sarcoma' in args.dataset:
         label_mapping = label_mappings[f'canine_sarcoma_{args.num_classes}']
-    elif 'microorganisms' in args.dataset:
-        label_mapping = label_mappings[f'microorganisms_{args.num_classes}']
     elif 'nsclc' in args.dataset:
         label_mapping = label_mappings['nsclc']
     elif 'crlm' in args.dataset:
