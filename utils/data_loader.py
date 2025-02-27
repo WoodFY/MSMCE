@@ -283,12 +283,12 @@ def load_crlm_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binni
     )
 
 
-def load_rcc_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binning_window=10):
+def load_rcc_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binning_window):
 
     def get_label_from_path(file_path):
         dir_name = os.path.basename(os.path.dirname(file_path))
 
-        if dir_name in ['RCC', 'Healthy']:
+        if dir_name in ['Control', 'RCC']:
             return dir_name
         else:
             raise ValueError(f'Unknown label in file path: {file_path}')
