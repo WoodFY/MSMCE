@@ -37,7 +37,7 @@ from utils.dataset_split import split_dataset
 from utils.data_normalization import tic_normalization
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1, 2, 3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3, 4, 5, 6, 7"
 
 
 def get_bin_dataset_path(exp_args):
