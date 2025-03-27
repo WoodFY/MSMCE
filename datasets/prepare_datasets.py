@@ -1,6 +1,7 @@
 import os
 import pickle
 
+from utils.file_utils import get_file_paths
 from utils.file_split import (
     split_nsclc_mzml_files,
     split_crlm_files,
@@ -14,19 +15,6 @@ from utils.data_loader import (
 )
 from utils.dataset_split import split_dataset
 from utils.data_process import bin_spectra
-
-
-def get_files_path(root_dir, dataset_dir, suffix):
-    files_path = []
-    files_dir = os.path.join(root_dir, dataset_dir)
-    if os.path.exists(files_dir):
-        for root, dirs, files in os.walk(files_dir):
-            for file in files:
-                if file.endswith(f'.{suffix}'):
-                    files_path.append(os.path.join(root, file))
-        return files_path
-    else:
-        raise FileNotFoundError(f"Directory {files_dir} does not exist.")
 
 
 def save_raw_mass_spec_data_to_pickle(file_path, mz_arrays, intensity_arrays, labels):
@@ -58,7 +46,7 @@ def prepare_canine_sarcoma_dataset(exp_args, label_mapping):
      - bin size: 0.1 Da
      - dimension: 15000
     """
-    canine_sarcoma_file_paths = get_files_path(exp_args['root_dir'], exp_args['dataset_dir'], suffix='mzML')
+    canine_sarcoma_file_paths = get_file_paths(os.path.join(exp_args['root_dir'], exp_args['dataset_dir']), suffix='.mzML')
     mz_arrays, intensity_arrays, labels = load_canine_sarcoma_mzml(
         file_paths=canine_sarcoma_file_paths,
         label_mapping=label_mapping,
@@ -102,7 +90,7 @@ def prepare_nsclc_dataset(exp_args, label_mapping):
      - rt binning window: 10 Sec
      - dimension: 12000
     """
-    nsclc_file_paths = get_files_path(exp_args['root_dir'], exp_args['dataset_dir'], suffix='mzML')
+    nsclc_file_paths = get_file_paths(os.path.join(exp_args['root_dir'], exp_args['dataset_dir']), suffix='.mzML')
 
     train_file_paths, test_file_paths = split_nsclc_mzml_files(file_paths=nsclc_file_paths)
 
@@ -144,7 +132,7 @@ def prepare_crlm_dataset(exp_args, label_mapping):
      - rt binning window: 10 Sec
      - dimension: 12000
     """
-    crlm_file_paths = get_files_path(exp_args['root_dir'], exp_args['dataset_dir'], suffix='mzML')
+    crlm_file_paths = get_file_paths(os.path.join(exp_args['root_dir'], exp_args['dataset_dir']), suffix='.mzML')
 
     train_file_paths, test_file_paths = split_crlm_files(file_paths=crlm_file_paths)
 
@@ -186,7 +174,7 @@ def prepare_rcc_dataset(exp_args, label_mapping):
      - rt binning window: 10 Sec
      - dimension: 19000
     """
-    rcc_file_paths = get_files_path(exp_args['root_dir'], exp_args['dataset_dir'], suffix='mzML')
+    rcc_file_paths = get_file_paths(os.path.join(exp_args['root_dir'], exp_args['dataset_dir']), suffix='.mzML')
 
     train_file_paths, test_file_paths = split_rcc_mzml_files(
         file_paths=rcc_file_paths,
