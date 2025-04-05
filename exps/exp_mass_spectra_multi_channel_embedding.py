@@ -5,7 +5,6 @@ from torchinfo import summary
 from torch.utils.data import DataLoader
 
 import os
-import time
 import argparse
 import numpy as np
 import pandas as pd
@@ -261,7 +260,7 @@ def exp(exp_args, save_dir, label_mapping, device, use_multi_gpu=False):
         else:
             model = model.to(device)
 
-        class_weights = compute_class_weight('balanced', classes=list(label_mapping.values()), y=y_train)
+        class_weights = compute_class_weight('balanced', classes=np.array(list(label_mapping.values())), y=y_train)
         class_weights = torch.tensor(class_weights, dtype=torch.float32, device=device)
         criterion = nn.CrossEntropyLoss(weight=class_weights)
 
