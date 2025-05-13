@@ -33,9 +33,6 @@ class MultiChannelEmbedding(nn.Module):
         encoded = self.encoder(x)
         # encoded: (batch_size, 1, embedding_dim)
         encoded = encoded.unsqueeze(1)
-
         embedded = self.channel_embedding(encoded)
-
         out = torch.cat([encoded, embedded], dim=1)
-
         return out

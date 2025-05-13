@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+import argparse
+
 from models.embedding.learnable_embedding import MultiChannelEmbedding
 
 
@@ -76,14 +78,14 @@ def build_transformer(args):
     num_heads = 4
     num_layers = 1
 
-    model_name = args['model_name']
+    model_name = args.model_name
 
     if 'MultiChannelEmbedding' in model_name:
         embedding_type = 'MultiChannelEmbedding'
         embedding_module = MultiChannelEmbedding(
-            spectrum_dim=args['spectrum_dim'],
-            embedding_channels=args['embedding_channels'],
-            embedding_dim=args['embedding_dim']
+            spectrum_dim=args.spectrum_dim,
+            embedding_channels=args.embedding_channels,
+            embedding_dim=args.embedding_dim
         )
     elif 'Embedding' in model_name and not any(substring in model_name for substring in ['MultiChannel']):
         raise ValueError(f"Invalid model name: {model_name}")
@@ -99,43 +101,43 @@ def build_transformer(args):
 
     if embedding_type and embedding_module:
         return EmbeddingTransformer(
-            spectrum_dim=args['spectrum_dim'],
+            spectrum_dim=args.spectrum_dim,
             input_dim=input_dim,
-            embedding_dim=args['embedding_dim'],
+            embedding_dim=args.embedding_dim,
             num_heads=num_heads,
             num_layers=num_layers,
-            num_classes=args['num_classes'],
+            num_classes=args.num_classes,
             embedding_type=embedding_type,
             embedding_module=embedding_module
         )
     else:
         return Transformer(
-            spectrum_dim=args['spectrum_dim'],
+            spectrum_dim=args.spectrum_dim,
             input_dim=input_dim,
             hidden_dim=hidden_dim,
             num_heads=num_heads,
             num_layers=num_layers,
-            num_classes=args['num_classes']
+            num_classes=args.num_classes
         )
 
 
 if __name__ == '__main__':
-    model_args = {}
-    model_args.update({
-        # 'model_name': 'MultiChannelEmbeddingTransformer',
-        'model_name': 'Transformer',
+    args = {
+        'model_name': 'MultiChannelEmbeddingTransformer',
+        # 'model_name': 'Transformer',
         'in_channels': 1,
         'spectrum_dim': 15000,
         'embedding_channels': 256,
         'embedding_dim': 1024,
         'num_classes': 3
-    })
-    model = build_transformer(model_args)
+    }
+    args = argparse.Namespace(**args)
+    model = build_transformer(args)
 
     # print models structure
     print(model)
 
-    x = torch.randn(1, model_args['spectrum_dim'])
+    x = torch.randn(1, args.spectrum_dim)
 
     output = model(x)
     print(output)

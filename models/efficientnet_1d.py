@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 import re
 import math
+import argparse
 
 from models.embedding.learnable_embedding import MultiChannelEmbedding
 
@@ -173,9 +174,8 @@ class EfficientNet1D(nn.Module):
                     nn.init.zeros_(m.bias)
 
     def forward(self, x):
-
-        x = x.unsqueeze(1)
-
+        if x.ndim == 2 and self.stem_conv.in_channels == 1:
+            x = x.unsqueeze(1)
         x = self.swish(self.bn0(self.stem_conv(x)))
         x = self.blocks(x)
         x = self.swish(self.bn1(self.head_conv(x)))
@@ -183,7 +183,6 @@ class EfficientNet1D(nn.Module):
         x = torch.flatten(x, 1)
         x = self.dropout(x)
         x = self.fc(x)
-
         return x
 
 
@@ -197,7 +196,7 @@ class EmbeddingEfficientNet1D(EfficientNet1D):
 
         if embedding_type and embedding_module:
             if embedding_type == 'MultiChannelEmbedding':
-                self.stem_conv = nn.Conv1d(in_channels=in_channels + embedding_channels, out_channels=self._round_filters(32), kernel_size=3, stride=2, padding=1, bias=False)
+                self.stem_conv = nn.Conv1d(in_channels=embedding_channels + 1, out_channels=self._round_filters(32), kernel_size=3, stride=2, padding=1, bias=False)
             else:
                 self.stem_conv = nn.Conv1d(in_channels=embedding_channels, out_channels=self._round_filters(32), kernel_size=3, stride=2, padding=1, bias=False)
 
@@ -205,22 +204,14 @@ class EmbeddingEfficientNet1D(EfficientNet1D):
 
         if self.embedding_module:
             if self.embedding_type == 'MultiChannelEmbedding':
-                x = self.embedding_module(x)
-
-                x = self.swish(self.bn0(self.stem_conv(x)))
-                x = self.blocks(x)
-                x = self.swish(self.bn1(self.head_conv(x)))
-                x = self.pooling(x)
-                x = torch.flatten(x, 1)
-                x = self.dropout(x)
-                x = self.fc(x)
-
-                return x
+                # (batch_size, embedding_channels + 1, embedding_dim)
+                x_embedded = self.embedding_module(x)
+                return super().forward(x_embedded)
         else:
-            raise ValueError("Invalid embedding type or module")
+            raise ValueError("Embedding module is not defined but EmbeddingEfficientNet1D.forward() was called.")
 
 
-def build_efficientnet_1d(model_args):
+def build_efficientnet_1d(args):
 
     # EfficientBX = (width_coefficient, depth_coefficient, dropout_rate)
     efficientnet_params = {
@@ -235,37 +226,40 @@ def build_efficientnet_1d(model_args):
         'efficientnet_b8': (2.2, 3.6, 0.5)
     }
 
-    model_name = model_args['model_name']
+    model_name = args.model_name
+    embedding_type = None
+    embedding_module = None
 
     if 'MultiChannelEmbedding' in model_name:
         embedding_type = 'MultiChannelEmbedding'
         embedding_module = MultiChannelEmbedding(
-            spectrum_dim=model_args['spectrum_dim'],
-            embedding_channels=model_args['embedding_channels'],
-            embedding_dim=model_args['embedding_dim']
+            spectrum_dim=args.spectrum_dim,
+            embedding_channels=args.embedding_channels,
+            embedding_dim=args.embedding_dim
         )
+        base_model_name = model_name.replace('MultiChannelEmbedding', '')
     elif 'Embedding' in model_name and not any(substring in model_name for substring in ['MultiChannel']):
-        raise ValueError(f"Invalid model name: {model_name}")
+        raise ValueError(f"Invalid or unsupported embedding type in model name: {model_name}")
     else:
-        embedding_type = None
-        embedding_module = None
-
-    if embedding_type:
-        model_name = model_name.replace(embedding_type, '')
+        base_model_name = model_name
 
     # EfficientNetB0 -> efficientnet_b0
-    base_model_name = re.sub(r'([A-Za-z]+)(B\d+)', lambda x: f"{x.group(1).lower()}_{x.group(2).lower()}", model_name)
+    match = re.match(r'([A-Za-z_]*)EfficientNet(B\d+)', base_model_name, re.IGNORECASE)
+    if match:
+        base_model_key = f"efficientnet_{match.group(2).lower()}"
+    else:
+        raise ValueError(f"Invalid model name: {base_model_name}")
 
-    if base_model_name in efficientnet_params:
+    if base_model_key in efficientnet_params:
         # Model instantiation
-        width_coefficient, depth_coefficient, dropout_rate = efficientnet_params[base_model_name]
+        width_coefficient, depth_coefficient, dropout_rate = efficientnet_params[base_model_key]
 
         if embedding_module:
             if embedding_type == 'MultiChannelEmbedding':
                 return EmbeddingEfficientNet1D(
-                    in_channels=model_args['in_channels'],
-                    embedding_channels=model_args['embedding_channels'],
-                    num_classes=model_args['num_classes'],
+                    in_channels=args.in_channels,
+                    embedding_channels=args.embedding_channels,
+                    num_classes=args.num_classes,
                     width_coefficient=width_coefficient,
                     depth_coefficient=depth_coefficient,
                     dropout_rate=dropout_rate,
@@ -274,8 +268,8 @@ def build_efficientnet_1d(model_args):
                 )
         else:
             return EfficientNet1D(
-                in_channels=model_args['in_channels'],
-                num_classes=model_args['num_classes'],
+                in_channels=args.in_channels,
+                num_classes=args.num_classes,
                 width_coefficient=width_coefficient,
                 depth_coefficient=depth_coefficient,
                 dropout_rate=dropout_rate
@@ -285,8 +279,7 @@ def build_efficientnet_1d(model_args):
 
 
 if __name__ == '__main__':
-    model_args = {}
-    model_args.update({
+    args = {
         'model_name': 'MultiChannelEmbeddingEfficientNetB0',
         # 'model_name': 'EfficientNetB0',
         'in_channels': 1,
@@ -294,14 +287,15 @@ if __name__ == '__main__':
         'embedding_channels': 256,
         'embedding_dim': 1024,
         'num_classes': 3
-    })
+    }
+    args = argparse.Namespace(**args)
     
-    model = build_efficientnet_1d(model_args)
+    model = build_efficientnet_1d(args)
 
     # print models structure
     print(model)
 
-    x = torch.randn(1, model_args['spectrum_dim'])
+    x = torch.randn(1, args.spectrum_dim)
     
     output = model(x)
     print(output)

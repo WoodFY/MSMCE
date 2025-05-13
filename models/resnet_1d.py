@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 
+import re
+import argparse
+
 from models.embedding.learnable_embedding import MultiChannelEmbedding
 
 
@@ -231,21 +234,17 @@ class ResNet1D(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        x = x.unsqueeze(1)
-
+        if x.ndim == 2 and self.conv1.in_channels == 1:
+            x = x.unsqueeze(1)
         x = self.relu(self.batchnorm1(self.conv1(x)))
         x = self.maxpool(x)
-
         x = self.block1(x)
         x = self.block2(x)
         x = self.block3(x)
         x = self.block4(x)
-
         x = self.average_pool(x)
-
         x = torch.flatten(x, start_dim=1)
         x = self.fc1(x)
-
         return x
 
 
@@ -259,7 +258,7 @@ class EmbeddingResNet1D(ResNet1D):
 
         if embedding_type and embedding_module:
             if embedding_type == 'MultiChannelEmbedding':
-                self.conv1 = nn.Conv1d(in_channels=in_channels + embedding_channels, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False)
+                self.conv1 = nn.Conv1d(in_channels=embedding_channels + 1, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False)
             else:
                 self.conv1 = nn.Conv1d(in_channels=embedding_channels, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False)
 
@@ -267,27 +266,14 @@ class EmbeddingResNet1D(ResNet1D):
 
         if self.embedding_module:
             if self.embedding_type == 'MultiChannelEmbedding':
-                x = self.embedding_module(x)
-
-                x = self.relu(self.batchnorm1(self.conv1(x)))
-                x = self.maxpool(x)
-
-                x = self.block1(x)
-                x = self.block2(x)
-                x = self.block3(x)
-                x = self.block4(x)
-
-                x = self.average_pool(x)
-
-                x = torch.flatten(x, start_dim=1)
-                x = self.fc1(x)
-
-                return x
+                # (batch_size, embedding_channels + 1, embedding_dim)
+                x_embedded = self.embedding_module(x)
+                return super().forward(x_embedded)
         else:
             raise ValueError("Invalid embedding type or module")
 
 
-def build_resnet_1d(model_args):
+def build_resnet_1d(args):
 
     # ResNetX = (Num of channels, repetition, Bottleneck_expansion, Bottleneck_layer)
     resnet_parameters = {
@@ -298,54 +284,56 @@ def build_resnet_1d(model_args):
         'resnet152': ([64, 128, 256, 512], [3, 8, 36, 3], 4, True)
     }
 
-    model_name = model_args['model_name']
+    model_name = args.model_name
+    embedding_type = None
+    embedding_module = None
 
     if 'MultiChannelEmbedding' in model_name:
         embedding_type = 'MultiChannelEmbedding'
         embedding_module = MultiChannelEmbedding(
-            spectrum_dim=model_args['spectrum_dim'],
-            embedding_channels=model_args['embedding_channels'],
-            embedding_dim=model_args['embedding_dim']
+            spectrum_dim=args.spectrum_dim,
+            embedding_channels=args.embedding_channels,
+            embedding_dim=args.embedding_dim
         )
+        base_model_name = model_name.replace('MultiChannelEmbedding', '')
     elif 'Embedding' in model_name and not any(substring in model_name for substring in ['MultiChannel']):
         raise ValueError(f"Invalid model name: {model_name}")
     else:
-        embedding_type = None
-        embedding_module = None
-
-    if embedding_type:
-        model_name = model_name.replace(embedding_type, '')
+        base_model_name = model_name
 
     # ResNet50 -> resnet50
-    base_model_name = model_name.lower()
+    match = re.match(r'([A-Za-z_]*)ResNet(\d+)', base_model_name, re.IGNORECASE)
+    if match:
+        base_model_key = base_model_name.lower()
+    else:
+        raise ValueError(f"Invalid model name: {base_model_name}")
 
-    if base_model_name in resnet_parameters:
+    if base_model_key in resnet_parameters:
         # Model instantiation
-        resnet_variant = resnet_parameters[base_model_name]
+        resnet_variant = resnet_parameters[base_model_key]
 
         if embedding_type and embedding_module:
             if embedding_type == 'MultiChannelEmbedding':
                 return EmbeddingResNet1D(
                     resnet_variant=resnet_variant,
-                    in_channels=model_args['in_channels'],
-                    embedding_channels=model_args['embedding_channels'],
-                    num_classes=model_args['num_classes'],
+                    in_channels=args.in_channels,
+                    embedding_channels=args.embedding_channels,
+                    num_classes=args.num_classes,
                     embedding_type=embedding_type,
                     embedding_module=embedding_module
                 )
         else:
             return ResNet1D(
                 resnet_variant=resnet_variant,
-                in_channels=model_args['in_channels'],
-                num_classes=model_args['num_classes']
+                in_channels=args.in_channels,
+                num_classes=args.num_classes
             )
     else:
         raise ValueError(f"Invalid model name: {model_name}")
 
 
 if __name__ == '__main__':
-    model_args = {}
-    model_args.update({
+    args = {
         'model_name': 'MultiChannelEmbeddingResNet50',
         # 'model_name': 'ResNet50',
         'in_channels': 1,
@@ -353,13 +341,14 @@ if __name__ == '__main__':
         'embedding_channels': 256,
         'embedding_dim': 1024,
         'num_classes': 3
-    })
-    model = build_resnet_1d(model_args)
+    }
+    args = argparse.Namespace(**args)
+    model = build_resnet_1d(args)
 
     # print models structure
     print(model)
 
-    x = torch.randn(1, model_args['spectrum_dim'])
+    x = torch.randn(1, args.spectrum_dim)
 
     output = model(x)
     print(output)
