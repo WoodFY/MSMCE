@@ -114,7 +114,7 @@ def prepare_dataset(exp_args, label_mapping):
         return X_train, y_train, X_test, y_test
 
 
-def exp(exp_args, save_dir, label_mapping, device, use_multi_gpu=False):
+def exp(args):
 
     model = None
 
@@ -357,22 +357,22 @@ def main():
     parser.add_argument('--embedding_channels', type=int, default=256, help='Number of embedding channels')
     parser.add_argument('--embedding_dim', type=int, default=256, help='Embedding dimension')
 
-    parser.add_argument('--num_classes', type=int, default=None, help='Number of classes')
     parser.add_argument('--batch_size', type=int, default=256, help='Batch size')
     parser.add_argument('--epochs', type=int, default=64, help='Number of epochs')
     parser.add_argument('--device', type=str, default=None, help='Device to use')
+    parser.add_argument('--preload', action='store_true', help='Preload dataset into memory')
+    parser.add_argument('--num_workers', type=int, default=32, help='Number of workers for DataLoader')
     parser.add_argument('--use_multi_gpu', action='store_true', help='Use multiple GPUs')
     parser.add_argument('--use_augmentation', action='store_true', help='Use augmentation')
     parser.add_argument('--use_normalization', action='store_true', help='Use normalization')
     parser.add_argument('--use_early_stopping', action='store_true', help='Use early stopping')
     parser.add_argument('--patience', type=int, default=20, help='Early stopping patience')
+    parser.add_argument('--random_seed', type=int, default=3407, help='Random seed for reproducibility')
 
     args = parser.parse_args()
 
     if args.device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    else:
-        device = torch.device(args.device)
+        args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if args.use_early_stopping:
         if args.patience is None:
@@ -382,6 +382,7 @@ def main():
     save_dir = os.path.join(args.root_dir, args.save_dir)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
+    args.save_dir = save_dir
 
     dataset_dirs = {
         'canine_sarcoma_posion': 'datasets/Canine_sarcoma/raw/positive',  # 100-1600 Da spectrum_dim 15000
@@ -390,6 +391,7 @@ def main():
         'crlm': 'datasets/CRLM/raw',  # spectrum_dim 12000
         'rcc_posion': 'datasets/RCC/raw/positive',  # spectrum_dim 9900
     }
+    args.dataset_dir = dataset_dirs[args.dataset]
 
     label_mappings = {
         'canine_sarcoma_2': {'Healthy': 0, 'Cancerous': 1},
@@ -413,7 +415,7 @@ def main():
     }
 
     if 'canine_sarcoma' in args.dataset:
-        label_mapping = label_mappings[f'canine_sarcoma_{args.num_classes}']
+        label_mapping = label_mappings[args.dataset]
     elif 'nsclc' in args.dataset:
         label_mapping = label_mappings['nsclc']
     elif 'crlm' in args.dataset:
@@ -423,52 +425,49 @@ def main():
     else:
         raise ValueError(f'Unknown dataset: {args.dataset}')
 
-    exp_args = {
-        'model_name': args.model_name,
-        'dataset': args.dataset,
-        'root_dir': args.root_dir,
-        'dataset_dir': dataset_dirs[args.dataset],
+    args.label_mapping = label_mapping
+    args.num_classes = len(label_mapping)
 
-        'in_channels': args.in_channels,
-        'spectrum_dim': args.spectrum_dim,
-        'bin_size': args.bin_size,
-        'rt_binning_window': args.rt_binning_window,
-        'embedding_channels': args.embedding_channels,
-        'embedding_dim': args.embedding_dim,
+    # exp_args = {
+    #     'model_name': args.model_name,
+    #     'dataset': args.dataset,
+    #     'root_dir': args.root_dir,
+    #     'dataset_dir': dataset_dirs[args.dataset],
+    #
+    #     'in_channels': args.in_channels,
+    #     'spectrum_dim': args.spectrum_dim,
+    #     'bin_size': args.bin_size,
+    #     'rt_binning_window': args.rt_binning_window,
+    #     'embedding_channels': args.embedding_channels,
+    #     'embedding_dim': args.embedding_dim,
+    #
+    #     'num_classes': args.num_classes,
+    #     'batch_size': args.batch_size,
+    #     'epochs': args.epochs,
+    #     'use_augmentation': args.use_augmentation,
+    #     'use_normalization': args.use_normalization,
+    #     'use_early_stopping': args.use_early_stopping,
+    #     'patience': args.patience,
+    #     'random_seed': 3407,
+    # }
 
-        'num_classes': args.num_classes,
-        'batch_size': args.batch_size,
-        'epochs': args.epochs,
-        'use_augmentation': args.use_augmentation,
-        'use_normalization': args.use_normalization,
-        'use_early_stopping': args.use_early_stopping,
-        'patience': args.patience,
-        'random_seed': 3407,
-    }
-
-    exp_dir, trained_model_name, metrics_results = exp(
-        exp_args=exp_args,
-        save_dir=save_dir,
-        label_mapping=label_mapping,
-        device=device,
-        use_multi_gpu=args.use_multi_gpu
-    )
+    exp_dir, trained_model_name, metrics_results = exp(args)
 
     # metrics_statistics = calculate_metrics_statistics(metrics_results)
 
-    if exp_args['model_name'] in ['SVM', 'RandomForest', 'XGBoost']:
-        print(f"{exp_args['model_name']} {args.dataset} num_classes: {exp_args['num_classes']}")
+    if args.model_name in ['SVM', 'RandomForest', 'XGBoost']:
+        print(f"{args.model_name}_{args.dataset}_num_classes_{args.num_classes}")
     else:
-        if 'Embedding' in exp_args['model_name']:
+        if 'Embedding' in args.model_name:
             print(
-                f"{exp_args['model_name']} {args.dataset} in_channels: {exp_args['in_channels']}, spectrum_dim: {exp_args['spectrum_dim']}, "
-                f"embedding_channels: {exp_args['embedding_channels']}, embedding_dim: {exp_args['embedding_dim']}, num_classes: {exp_args['num_classes']}, "
-                f"batch_size: {exp_args['batch_size']}, epochs: {exp_args['epochs']}"
+                f"{args.model_name}_{args.dataset}_in_channels_{args.in_channels}_spectrum_dim_{args.spectrum_dim}_"
+                f"embedding_channels_{args.embedding_channels}_embedding_dim_{args.embedding_dim}_num_classes_{args.num_classes}_"
+                f"batch_size_{args.batch_size}_epochs_{args.epochs}"
             )
         else:
             print(
-                f"{exp_args['model_name']} {args.dataset} in_channels: {exp_args['in_channels']}, spectrum_dim: {exp_args['spectrum_dim']}, num_classes: {exp_args['num_classes']}, "
-                f"batch_size: {exp_args['batch_size']}, epochs: {exp_args['epochs']}"
+                f"{args.model_name}_{args.dataset}_in_channels_{args.in_channels}_spectrum_dim_{args.spectrum_dim}_num_classes_{args.num_classes}_"
+                f"batch_size_{args.batch_size}_epochs_{args.epochs}"
             )
 
     for metric, result in metrics_results.items():
