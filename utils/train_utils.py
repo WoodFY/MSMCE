@@ -12,8 +12,8 @@ from utils.metrics_visualization import plot_metrics, plot_confusion_matrix, plo
 
 
 def train(
-        exp_dir, exp_model_name, model, train_loader, valid_loader, criterion, optimizers,
-        schedulers, early_stopping, epochs, device, use_early_stopping=False, metrics_visualization=True
+        model, train_loader, valid_loader, criterion, optimizer, scheduler, early_stopping,
+        epochs, device, exp_base_dir, exp_model_name, metrics_visualization=True
 ):
     train_losses = []
     train_accuracies = []
@@ -30,19 +30,17 @@ def train(
 
         epoch_digits = len(str(epochs))
         epoch_str = f'{epoch + 1}'.zfill(epoch_digits)
-        train_progress_bar = tqdm(train_loader, desc=f'Epoch: {epoch_str} Training', leave=True)
+        train_progress_bar = tqdm(train_loader, desc=f'Epoch: {epoch_str} Training  ', leave=True)
         for X, y in train_progress_bar:
             X, y = X.to(device), y.to(device)
 
-            for optimizer in optimizers:
-                optimizer.zero_grad()
+            optimizer.zero_grad()
 
             logits = model(X)
             loss = criterion(logits, y)
 
             loss.backward()
-            for optimizer in optimizers:
-                optimizer.step()
+            optimizer.step()
 
             total_train_loss += (loss.item() * y.size(0))
             total_train_correct += (logits.argmax(dim=1) == y).sum().item()
@@ -87,12 +85,10 @@ def train(
             epoch_str, epoch_train_loss, epoch_train_accuracy, epoch_valid_loss, epoch_valid_accuracy
         ))
 
-        # scheduler.step(valid_loss)
-        for scheduler in schedulers:
-            scheduler.step(epoch_valid_loss)
+        scheduler.step(epoch_valid_loss)
 
-        if use_early_stopping:
-            early_stopping(epoch_valid_loss, model, save_model_dir=exp_dir, save_model_name=exp_model_name)
+        if early_stopping:
+            early_stopping(epoch_valid_loss, model, save_model_dir=exp_base_dir, save_model_name=exp_model_name)
             if early_stopping.early_stop:
                 print('Early Stopping.')
 
@@ -101,12 +97,12 @@ def train(
                         (train_losses, valid_losses),
                         (train_accuracies, valid_accuracies)
                     ]
-                    plot_metrics(exp_dir, exp_model_name, metrics, ['Loss', 'Accuracy'])
+                    plot_metrics(exp_base_dir, exp_model_name, metrics, ['Loss', 'Accuracy'])
 
                 break
 
         else:
-            save_model_path = os.path.join(exp_dir, f'{exp_model_name}.pth')
+            save_model_path = os.path.join(exp_base_dir, f'{exp_model_name}.pth')
 
             if epoch_valid_loss < min_loss:
                 min_loss = epoch_valid_loss
@@ -122,22 +118,22 @@ def train(
         'Valid Accuracy': valid_accuracies
     })
     time_stamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    metrics_df.to_csv(os.path.join(exp_dir, f'{exp_model_name}_metrics_{time_stamp}.csv'), index=False)
-    print(f'Metrics saved to {exp_dir}')
+    metrics_df.to_csv(os.path.join(exp_base_dir, f'{exp_model_name}_metrics_{time_stamp}.csv'), index=False)
+    print(f'Metrics saved to {exp_base_dir}')
 
     if metrics_visualization:
         metrics = [
             (train_losses, valid_losses),
             (train_accuracies, valid_accuracies),
         ]
-        plot_metrics(exp_dir, exp_model_name, metrics, ['Loss', 'Accuracy'])
+        plot_metrics(exp_base_dir, exp_model_name, metrics, ['Loss', 'Accuracy'])
 
 
 def test(
-        exp_dir, exp_model_name, model, test_loader, criterion, label_mapping,
-        device, metrics_visualization=True
+        model, test_loader, criterion, label_mapping, device,
+        exp_base_dir, exp_model_name, metrics_visualization=True
 ):
-    save_model_path = os.path.join(exp_dir, f'{exp_model_name}.pth')
+    save_model_path = os.path.join(exp_base_dir, f'{exp_model_name}.pth')
 
     if not os.path.exists(save_model_path):
         raise FileNotFoundError('No models checkpoint file found in the directory.')
@@ -190,7 +186,7 @@ def test(
     print('==========================================================================================')
 
     if metrics_visualization:
-        plot_confusion_matrix(all_labels, all_predicts, label_mapping, exp_model_name, exp_dir, cm=confusion_matrix)
-        plot_roc_auc_curve(np.array(all_labels), np.array(all_predicts_proba), label_mapping, exp_model_name, exp_dir)
+        plot_confusion_matrix(all_labels, all_predicts, label_mapping, exp_model_name, exp_base_dir, cm=confusion_matrix)
+        plot_roc_auc_curve(np.array(all_labels), np.array(all_predicts_proba), label_mapping, exp_model_name, exp_base_dir)
 
     return test_accuracy, test_precision, test_recall, test_f1

@@ -5,7 +5,7 @@ from utils.metrics import compute_accuracy, compute_precision, compute_recall, c
 from utils.metrics_visualization import plot_confusion_matrix, plot_roc_auc_curve
 
 
-def train_test_ml(exp_dir, exp_model_name, model, train_set, test_set, label_mapping, metrics_visualization=True):
+def train_test_ml(model, train_set, test_set, label_mapping, exp_base_dir, exp_model_name, metrics_visualization=True):
     """
     Train a machine learning model and evaluate it on the test set.
     """
@@ -13,7 +13,7 @@ def train_test_ml(exp_dir, exp_model_name, model, train_set, test_set, label_map
     X_test, y_test = test_set
 
     model.fit(X_train, y_train)
-    save_model_path = os.path.join(exp_dir, f'{exp_model_name}.pkl')
+    save_model_path = os.path.join(exp_base_dir, f'{exp_model_name}.pkl')
     joblib.dump(model, save_model_path)
 
     y_pred = model.predict(X_test)
@@ -34,7 +34,7 @@ def train_test_ml(exp_dir, exp_model_name, model, train_set, test_set, label_map
     print('==========================================================================================')
 
     if metrics_visualization:
-        plot_confusion_matrix(y_test, y_pred, label_mapping, exp_model_name, exp_dir, cm=confusion_matrix)
-        plot_roc_auc_curve(y_test, model.predict_proba(X_test), label_mapping, exp_model_name, exp_dir)
+        plot_confusion_matrix(y_test, y_pred, label_mapping, exp_model_name, exp_base_dir, cm=confusion_matrix)
+        plot_roc_auc_curve(y_test, model.predict_proba(X_test), label_mapping, exp_model_name, exp_base_dir)
 
     return test_accuracy, test_precision, test_recall, test_f1
