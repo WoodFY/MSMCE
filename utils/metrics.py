@@ -9,84 +9,59 @@ from sklearn.metrics import (
     roc_curve,
     auc
 )
+from sklearn.utils import resample as bootstrap_resample
 
 
-def compute_accuracy(targets, predicts):
+def compute_accuracy(y_true, y_pred):
     """
-    Compute accuracy
+    Compute accuracy.
 
-    Args:
-        targets: true labels
-        predicts: predicted labels
-
-    Returns:
-        accuracy score
+    :param y_true: true labels
+    :param y_pred: predicted labels
     """
-    # targets = targets
-    # predicts = predicts.argmax(axis=-1)
-    return accuracy_score(targets, predicts)
+    return accuracy_score(y_true=y_true, y_pred=y_pred)
 
 
-def compute_precision(targets, predicts, average='macro', zero_division=0):
+def compute_precision(y_true, y_pred, average='macro', zero_division=0):
     """
-    Compute precision
+    Compute precision.
 
-    Args:
-        targets: true labels
-        predicts: predicted labels
-        average: averaging strategy
-
-    Returns:
-        precision score
+    :param y_true: true labels
+    :param y_pred: predicted labels
     """
-    return precision_score(targets, predicts, average=average, zero_division=zero_division)
+    return precision_score(y_true=y_true, y_pred=y_pred, average=average, zero_division=zero_division)
 
 
-def compute_recall(targets, predicts, average='macro'):
+def compute_recall(y_true, y_pred, average='macro'):
     """
-    Compute recall
+    Compute recall.
 
-    Args:
-        targets: true labels
-        predicts: predicted labels
-        average: averaging strategy
-
-    Returns:
-        recall score
+    :param y_true: true labels
+    :param y_pred: predicted labels
     """
-    return recall_score(targets, predicts, average=average)
+    return recall_score(y_true=y_true, y_pred=y_pred, average=average)
 
 
-def compute_f1(targets, predicts, average='macro'):
+def compute_f1(y_true, y_pred, average='macro'):
     """
-    Compute f1 score
+    Compute f1 score.
 
-    Args:
-        targets: true labels
-        predicts: predicted labels
-        average: averaging strategy
-
-    Returns:
-        f1 score
+    :param y_true: true labels
+    :param y_pred: predicted labels
     """
-    return f1_score(targets, predicts, average=average)
+    return f1_score(y_true=y_true, y_pred=y_pred, average=average)
 
 
-def compute_confusion_matrix(targets, predicts, label_mapping):
+def compute_confusion_matrix(y_true, y_pred, label_mapping):
     """
-    Compute confusion matrix
+    Compute confusion matrix.
 
-    Args:
-        targets: true labels
-        predicts: predicted labels
-        label_mapping: mapping from label to class name
-
-    Returns:
-        confusion matrix
+    :param y_true: true labels
+    :param y_pred: predicted labels
     """
     class_labels = [label for label, _ in sorted(label_mapping.items(), key=lambda item: item[1])]
-    targets_mapped = [class_labels[target] for target in targets]
-    predicts_mapped = [class_labels[predict] for predict in predicts]
+    targets_mapped = [class_labels[target] for target in y_true]
+    predicts_mapped = [class_labels[predict] for predict in y_pred]
     cm = confusion_matrix(targets_mapped, predicts_mapped, labels=class_labels)
     return cm, class_labels
 
@@ -95,12 +70,8 @@ def compute_specificity(cm, label_mapping):
     """
     Compute specificity
 
-    Args:
-        cm: confusion matrix
-        label_mapping: mapping from label to class name
-
-    Returns:
-        specificity
+    :param cm: confusion matrix
+    :param label_mapping: mapping from label to class name
     """
     specificity = {}
     for i, label in enumerate(label_mapping):
@@ -112,52 +83,32 @@ def compute_specificity(cm, label_mapping):
     return specificity
 
 
-def compute_roc_auc(targets, predicts, num_classes):
+def compute_roc_auc(y_true, y_pred, num_classes):
     """
     Compute ROC-AUC score
 
-    Args:
-        targets: true labels
-        predicts: predicted probabilities
-        num_classes: number of classes
-
-    Returns:
-        ROC-AUC score
+    :param y_true: true labels
+    :param y_pred: predicted probabilities
+    :param num_classes: number of classes
     """
-    targets_one_hot = np.eye(num_classes)[targets]
+    targets_one_hot = np.eye(num_classes)[y_true]
 
     fpr, tpr = {}, {}
     roc_auc = {}
 
     for i in range(num_classes):
-        fpr[i], tpr[i], _ = roc_curve(targets_one_hot[:, i], predicts[:, i])
+        fpr[i], tpr[i], _ = roc_curve(targets_one_hot[:, i], y_pred[:, i])
         roc_auc[i] = auc(fpr[i], tpr[i])
 
     return fpr, tpr, roc_auc
+
 
 def calculate_metrics_statistics(metrics_list):
     """
     Calculate statistics of metrics
 
-    Args:
-        metrics_list: [(accuracy, precision, recall, f1 score), (...), ...]
-
-    Returns:
-
+    :param metrics_list: [(accuracy, precision, recall, f1 score), (...), ...]
     """
-    # metrics_array = np.array(metrics_list)
-    #
-    # mean_metrics = np.mean(metrics_array, axis=0)
-    # std_metrics = np.std(metrics_array, axis=0)
-    #
-    # # generate mean ± std string
-    # metrics_statistics = {
-    #     'Accuracy': f"{mean_metrics[0]:.2f} ± {std_metrics[0]:.2f}",
-    #     'Precision': f"{mean_metrics[1]:.2f} ± {std_metrics[1]:.2f}",
-    #     'Recall': f"{mean_metrics[2]:.2f} ± {std_metrics[2]:.2f}",
-    #     'F1 Score': f"{mean_metrics[3]:.2f} ± {std_metrics[3]:.2f}"
-    # }
-
     accuracies = [metrics['Accuracy'] for metrics in metrics_list]
     precisions = [metrics['Precision'] for metrics in metrics_list]
     recalls = [metrics['Recall'] for metrics in metrics_list]
@@ -185,3 +136,18 @@ def calculate_metrics_statistics(metrics_list):
     return metrics_statistics
 
 
+def calculate_bootstrap_ci(data, n_bootstraps=1000, alpha=0.05, random_seed=3407):
+    """
+    Calculate bootstrap confidence interval.
+    """
+    if len(data) < 2:
+        return np.nan, np.nan
+    if random_seed:
+        np.random.seed(random_seed)
+    bootstrap_means = []
+    for _ in range(n_bootstraps):
+        sample = bootstrap_resample(data)
+        bootstrap_means.append(np.mean(sample))
+    lower_bound = np.percentile(bootstrap_means, 100 * (alpha / 2.0))
+    upper_bound = np.percentile(bootstrap_means, 100 * (1 - alpha / 2.0))
+    return lower_bound, upper_bound
