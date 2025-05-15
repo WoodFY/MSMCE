@@ -110,7 +110,7 @@ def train(
                 print(f"Model saved at epoch {epoch + 1}, validation loss: {min_loss:.4f}")
 
     # save train and valid accuracy
-    metrics_df = pd.DataFrame({
+    epoch_metrics_df = pd.DataFrame({
         'Epoch': list(range(1, len(train_accuracies) + 1)),
         'Train Loss': train_losses,
         'Valid Loss': valid_losses,
@@ -118,8 +118,8 @@ def train(
         'Valid Accuracy': valid_accuracies
     })
     time_stamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    metrics_df.to_csv(os.path.join(exp_base_dir, f'{exp_model_name}_metrics_{time_stamp}.csv'), index=False)
-    print(f'Metrics saved to {exp_base_dir}')
+    epoch_metrics_df.to_csv(os.path.join(exp_base_dir, f'{exp_model_name}_epoch_metrics_{time_stamp}.csv'), index=False)
+    print(f'Epoch metrics saved to {exp_base_dir}')
 
     if metrics_visualization:
         metrics = [

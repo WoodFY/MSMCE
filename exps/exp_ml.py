@@ -68,22 +68,20 @@ def run_experiment(args):
         X_test = tic_normalization(X_test)
         print("Normalization complete.")
 
-    print(f"{args.model_name}_{args.dataset_name}_num_classes_{args.num_classes}")
     exp_dir_name = (f"{args.model_name}_{args.dataset_name}_num_classes_{args.num_classes}")
-    exp_base_dir = os.path.join(
-        args.save_dir,
-        exp_dir_name
-    )
-    exp_model_name = f"{args.model_name}_train_on_{args.dataset_name}_{args.num_classes}"
-
+    exp_base_dir = os.path.join(args.save_dir, exp_dir_name)
     if not os.path.exists(exp_base_dir):
         os.makedirs(exp_base_dir)
+
+    print(exp_dir_name)
 
     skf = StratifiedKFold(n_splits=args.k_folds, shuffle=True, random_state=args.random_seed)
     fold_test_metrics_list = []
 
     for fold_idx, (train_fold_indices, valid_fold_indices) in enumerate(skf.split(X_train, y_train)):
         print(f"{args.model_name} Fold {fold_idx + 1}/{args.k_folds}")
+        exp_model_name = f"{args.model_name}_kfold_{fold_idx + 1}_trained_on_{args.dataset_name}_{args.num_classes}"
+
         X_train_fold, y_train_fold = X_train[train_fold_indices], y_train[train_fold_indices]
         # X_valid_fold and y_valid_fold are not strictly used for final metric reporting in this setup,
         # but could be used for internal model checks or if hyperparameter tuning was done per fold.
@@ -136,15 +134,16 @@ def run_experiment(args):
             '95% CI Upper': ci_upper
         })
 
-        summary_stats_df = pd.DataFrame(summary_stats_list)
-        print("Summary Statistics (Mean, Std, 95% Bootstrap CI from K-Fold models tested on hold-out):")
-        print(summary_stats_df)
+    print(exp_dir_name)
+    summary_stats_df = pd.DataFrame(summary_stats_list)
+    print("Summary Statistics (Mean, Std, 95% Bootstrap CI from K-Fold models tested on hold-out):")
+    print(summary_stats_df)
 
-        time_stamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        fold_test_metrics_csv_path = os.path.join(exp_base_dir, f"{args.model_name}_kfold_tested_on_holdout_metrics_{time_stamp}.csv")
-        summary_stats_csv_path = os.path.join(exp_base_dir, f"{args.model_name}_kfold_tested_on_holdout_summary_stats_{time_stamp}.csv")
-        fold_test_metrics_df.to_csv(fold_test_metrics_csv_path, index=False)
-        summary_stats_df.to_csv(summary_stats_csv_path, index=False)
+    time_stamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    fold_test_metrics_csv_path = os.path.join(exp_base_dir, f"{args.model_name}_kfold_tested_on_holdout_metrics_{time_stamp}.csv")
+    summary_stats_csv_path = os.path.join(exp_base_dir, f"{args.model_name}_kfold_tested_on_holdout_summary_stats_{time_stamp}.csv")
+    fold_test_metrics_df.to_csv(fold_test_metrics_csv_path, index=False)
+    summary_stats_df.to_csv(summary_stats_csv_path, index=False)
 
 
 def main():
@@ -174,9 +173,9 @@ def main():
 
     dataset_dirs = {
         'canine_sarcoma_posion': 'datasets/Canine_sarcoma/raw/positive',  # 100-1600 Da spectrum_dim 15000
-        'nsclc': 'datasets/NSCLC/raw',  # spectrum_dim 12000
-        'crlm': 'datasets/CRLM/raw',  # spectrum_dim 12000
-        'rcc_posion': 'datasets/RCC/raw/positive',  # spectrum_dim 9900
+        'nsclc': 'datasets/NSCLC/raw',  # 400-1600 Da spectrum_dim 12000
+        'crlm': 'datasets/CRLM/raw',  # 400-1600 Da spectrum_dim 12000
+        'rcc_posion': 'datasets/RCC/raw/positive',  # 70-1060 Da spectrum_dim 9900
     }
     args.dataset_dir = dataset_dirs[args.dataset_name]
 
