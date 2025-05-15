@@ -224,7 +224,7 @@ def get_bin_dataset_path(args):
 
         saved_bin_train_dataset_path = f"{bin_dataset_dir}/{args.dataset_name}_classes_{args.num_classes}_bin_{args.bin_size}_train.pkl"
         saved_bin_test_dataset_path = f"{bin_dataset_dir}/{args.dataset_name}_classes_{args.num_classes}_bin_{args.bin_size}_test.pkl"
-    elif args.dataset_name in ['rcc', 'nsclc', 'crlm']:
+    elif args.dataset_name in ['rcc_posion', 'nsclc', 'crlm']:
         bin_dataset_dir = os.path.join(args.root_dir, args.dataset_dir.replace('raw', f"bin/bin_{args.bin_size}"))
 
         if not os.path.exists(bin_dataset_dir):
