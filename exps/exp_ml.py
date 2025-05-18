@@ -7,7 +7,7 @@ from datetime import datetime
 from sklearn.model_selection import StratifiedKFold
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
-from xgboost import XGBClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 from datasets.prepare_datasets import prepare_dataset
 from utils.data_normalization import tic_normalization
@@ -31,7 +31,7 @@ def machine_learning_model_and_param_grid(model_name, random_seed):
             'gamma': [1, 0.1, 0.01, 0.001],
             'kernel': ['rbf', 'poly', 'sigmoid']
         }
-    elif model_name == 'RandomForest':
+    elif model_name == 'RF' or model_name == 'RandomForest':
         model = RandomForestClassifier(random_state=random_seed)
         param_grid = {
             'n_estimators': [5, 10, 50],
@@ -39,13 +39,12 @@ def machine_learning_model_and_param_grid(model_name, random_seed):
             'min_samples_split': [2, 5, 10],
             'min_samples_leaf': [1, 2, 4]
         }
-    elif model_name == 'XGBoost':
-        model = XGBClassifier(random_state=random_seed)
+    elif model_name == 'LDA':
+        model = LinearDiscriminantAnalysis()
         param_grid = {
-            'n_estimators': [5, 10, 50],
-            'learning_rate': [0.01, 0.1, 0.2],
-            'max_depth': [3, 5, 7],
-            'subsample': [0.7, 0.8, 0.9],
+            'n_components': [5, 10, 50],
+            'solver': ['lbfgs'],
+            'alpha': [0.1, 1, 10, 100],
         }
     else:
         raise ValueError(f"Unknown ML model: {model_name}")
@@ -93,10 +92,10 @@ def run_experiment(args):
 
         if args.model_name == 'SVM':
             model = SVC(kernel='rbf', probability=True, random_state=args.random_seed)
-        elif args.model_name == 'RandomForest':
-            model = RandomForestClassifier(n_estimators=10, random_state=args.random_seed)
-        elif args.model_name == 'XGBoost':
-            model = XGBClassifier(n_estimators=10, random_state=args.random_seed)
+        elif args.model_name == 'RF' or args.model_name == 'RandomForest':
+            model = RandomForestClassifier(random_state=args.random_seed)
+        elif args.model_name == 'LDA':
+            model = LinearDiscriminantAnalysis()
         else:
             raise ValueError(f'Unknown model: {args.model_name}')
 
