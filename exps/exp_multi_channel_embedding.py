@@ -14,13 +14,13 @@ from datetime import datetime
 from sklearn.model_selection import StratifiedKFold
 from sklearn.utils.class_weight import compute_class_weight
 
+from datasets.prepare_datasets import prepare_dataset
+from datasets.datasets import MassSpectraDataset
 from models.resnet_1d import build_resnet_1d
 from models.densenet_1d import build_densenet_1d
 from models.efficientnet_1d import build_efficientnet_1d
 from models.lstm import build_lstm
 from models.transformer import build_transformer
-from datasets.prepare_datasets import prepare_dataset
-from datasets.datasets import MassSpectraDataset
 from callbacks.early_stopping import EarlyStopping
 from utils.data_normalization import tic_normalization
 from utils.train_utils import train, test
@@ -35,9 +35,6 @@ def set_seeds(random_seed):
     Sets random seeds for reproducibility.
     """
     np.random.seed(random_seed)
-    torch.manual_seed(random_seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(random_seed)
     print(f"Seeds set to: {random_seed}")
 
 
@@ -247,7 +244,7 @@ def main():
     parser.add_argument('--use_augmentation', action='store_true', help='Use augmentation')
     parser.add_argument('--use_normalization', action='store_true', help='Use normalization')
     parser.add_argument('--use_early_stopping', action='store_true', help='Use early stopping')
-    parser.add_argument('--patience', type=int, default=20, help='Early stopping patience')
+    parser.add_argument('--patience', type=int, default=10, help='Early stopping patience')
     parser.add_argument('--random_seed', type=int, default=3407, help='Random seed for reproducibility')
 
     args = parser.parse_args()
@@ -257,10 +254,6 @@ def main():
 
     if args.use_multi_gpu:
         args.device = torch.device("cuda:0")
-
-    if args.use_early_stopping:
-        if args.patience is None:
-            args.patience = 10
 
     # Set save directory
     save_dir = os.path.join(args.root_dir, args.save_dir)

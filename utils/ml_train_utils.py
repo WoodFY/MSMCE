@@ -1,7 +1,7 @@
 import os
 import joblib
 
-from utils.metrics import compute_accuracy, compute_precision, compute_recall, compute_f1, compute_confusion_matrix, compute_specificity
+from utils.metrics import calculate_accuracy, calculate_precision, calculate_recall, calculate_f1_score, calculate_confusion_matrix, calculate_specificity
 from utils.metrics_visualization import plot_confusion_matrix, plot_roc_auc_curve
 
 
@@ -18,18 +18,17 @@ def train_test_ml(model, train_set, test_set, label_mapping, exp_base_dir, exp_m
 
     y_pred = model.predict(X_test)
 
-    test_accuracy = compute_accuracy(y_test, y_pred)
-    test_precision = compute_precision(y_test, y_pred)
-    test_recall = compute_recall(y_test, y_pred)
-    test_f1 = compute_f1(y_test, y_pred)
+    test_accuracy = calculate_accuracy(y_test, y_pred)
+    test_precision = calculate_precision(y_test, y_pred)
+    test_recall = calculate_recall(y_test, y_pred)
+    test_f1 = calculate_f1_score(y_test, y_pred)
     print('==========================================================================================')
-    print('Test Acc: {:.4f} | Test Precision: {:.4f} | Test Recall (Sensitivity): :{:.4f} | Test F1: {:.4f}'.format(
-        test_accuracy, test_precision, test_recall, test_f1)
-    )
+    print(f'Test Accuracy: {test_accuracy:.4f} | Test Precision: {test_precision:.4f} | '
+          f'Test Recall (Sensitivity): {test_recall:.4f} | Test F1: {test_f1:.4f}')
 
-    confusion_matrix, _ = compute_confusion_matrix(y_test, y_pred, label_mapping)
+    confusion_matrix, _ = calculate_confusion_matrix(y_test, y_pred, label_mapping)
     # print(f'Confusion Matrix: \n{matrix}')
-    specificity = compute_specificity(confusion_matrix, label_mapping)
+    specificity = calculate_specificity(confusion_matrix, label_mapping)
     print(f'Specificity for each class: {specificity}')
     print('==========================================================================================')
 

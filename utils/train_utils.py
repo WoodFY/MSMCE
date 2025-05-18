@@ -7,7 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 from datetime import datetime
 
-from utils.metrics import compute_precision, compute_recall, compute_f1, compute_confusion_matrix, compute_specificity
+from utils.metrics import calculate_accuracy, calculate_precision, calculate_recall, calculate_f1_score, calculate_confusion_matrix, calculate_specificity
 from utils.metrics_visualization import plot_metrics, plot_confusion_matrix, plot_roc_auc_curve
 
 
@@ -169,19 +169,19 @@ def test(
             })
 
     test_loss = total_test_loss / total_test_samples
-    test_accuracy = total_test_correct / total_test_samples
-    test_precision = compute_precision(all_labels, all_predicts)
-    test_recall = compute_recall(all_labels, all_predicts)
-    test_f1 = compute_f1(all_labels, all_predicts)
+    # test_accuracy = total_test_correct / total_test_samples
+    test_accuracy = calculate_accuracy(all_labels, all_predicts)
+    test_precision = calculate_precision(all_labels, all_predicts)
+    test_recall = calculate_recall(all_labels, all_predicts)
+    test_f1 = calculate_f1_score(all_labels, all_predicts)
     print('==========================================================================================')
-    print('Test Loss: {:.4f} | Test Acc: {:.4f}'.format(test_loss, test_accuracy))
-    print('Test Precision: {:.4f} | Test Recall (Sensitivity): :{:.4f} | Test F1: {:.4f}'.format(
-        test_precision, test_recall, test_f1)
-    )
+    print(f'Test Loss: {test_loss:.4f}')
+    print(f'Test Accuracy: {test_accuracy:.4f} | Test Precision: {test_precision:.4f} | '
+          f'Test Recall (Sensitivity): {test_recall:.4f} | Test F1: {test_f1:.4f}')
 
-    confusion_matrix, _ = compute_confusion_matrix(all_labels, all_predicts, label_mapping)
+    confusion_matrix, _ = calculate_confusion_matrix(all_labels, all_predicts, label_mapping)
     # print(f'Confusion Matrix: \n{matrix}')
-    specificity = compute_specificity(confusion_matrix, label_mapping)
+    specificity = calculate_specificity(confusion_matrix, label_mapping)
     print(f'Specificity for each class: {specificity}')
     print('==========================================================================================')
 
