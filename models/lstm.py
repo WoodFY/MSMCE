@@ -20,10 +20,14 @@ class LSTM(nn.Module):
         self.classifier = nn.Linear(hidden_size, num_classes)
 
     def forward(self, x):
-        if x.ndim == 2 and self.input_size == 1:
-            # x: (batch_size, spectrum_dim) -> (batch_size, spectrum_dim, 1)
-            x = x.unsqueeze(-1)
-        # lstm_out: (batch_size, spectrum_dim, hidden_size)
+        if x.ndim == 2:
+            batch_size = x.size(0)
+            spectrum_dim = x.size(1)
+            num_time_steps = spectrum_dim // self.input_size
+            x = x[:, :num_time_steps * self.input_size]
+            # x: (batch_size, num_time_steps, input_size)
+            x = x.view(batch_size, num_time_steps, self.input_size)
+        # lstm_out: (batch_size, num_time_steps, hidden_size)
         lstm_out, _ = self.lstm(x)
         # last_out: (batch_size, hidden_size)
         last_out = lstm_out[:, -1, :]
@@ -48,9 +52,9 @@ class EmbeddingLSTM(LSTM):
 
 
 def build_lstm(args):
-    input_size = 1
-    hidden_size = 32
-    num_layers = 1
+    input_size = 1000
+    hidden_size = 2048
+    num_layers = 2
 
     model_name = args.model_name
 
