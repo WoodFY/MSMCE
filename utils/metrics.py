@@ -115,7 +115,7 @@ def calculate_bootstrap_ci(samples, n_bootstraps=1000, alpha=0.05, random_seed=3
     return lower_bound, upper_bound
 
 
-def calculate_wilcoxon_test_p_value(model_alpha_metrics_file, model_beta_metrics_file, metric_to_compare='Accuracy', alpha=0.05):
+def calculate_wilcoxon_test_p_value(model_alpha_metrics_file, model_beta_metrics_file, metric_to_compare='Accuracy'):
     """
     Calculate the Wilcoxon signed-rank test p-value between two models
     based on their K-fold metrics from CSV files.
@@ -127,9 +127,6 @@ def calculate_wilcoxon_test_p_value(model_alpha_metrics_file, model_beta_metrics
     except FileNotFoundError as e:
         raise FileNotFoundError(f"File not found: {e.filename}. Please check paths: '{model_alpha_metrics_file}', '{model_beta_metrics_file}'")
 
-    model_alpha_basename = os.path.basename(model_alpha_metrics_file)
-    model_beta_basename = os.path.basename(model_beta_metrics_file)
-
     values_a = df_a[metric_to_compare].dropna().values
     values_b = df_b[metric_to_compare].dropna().values
 
@@ -137,4 +134,4 @@ def calculate_wilcoxon_test_p_value(model_alpha_metrics_file, model_beta_metrics
         raise ValueError(f"Arrays for metric '{metric_to_compare}' and '{metric_to_compare}' have mismatched lengths.")
 
     result = wilcoxon(values_a, values_b, alternative='two-sided', zero_method='wilcox', correction=False)
-    return result.statistic, result.pvalue
+    return result.pvalue
