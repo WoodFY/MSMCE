@@ -5,6 +5,7 @@ from torchinfo import summary
 from torch.utils.data import DataLoader
 
 import os
+import time
 import argparse
 import numpy as np
 import pandas as pd
@@ -27,7 +28,7 @@ from utils.train_utils import train, test
 from utils.metrics import calculate_bootstrap_ci
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1, 2, 3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0, 2, 3"
 
 
 def set_seeds(random_seed):
@@ -155,6 +156,7 @@ def run_experiment(args):
             with open(os.path.join(exp_base_dir, f"{exp_dir_name}_model_flops_params.txt"), 'w', encoding='utf-8') as file:
                 file.write(f"FLOPs: {flops_str}\n")
                 file.write(f"Params: {params_str}\n")
+            time.sleep(10000)
 
         train(
             model=model,
@@ -212,8 +214,8 @@ def run_experiment(args):
     print(summary_stats_df)
 
     time_stamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    fold_test_metrics_csv_path = os.path.join(exp_base_dir, f"{args.model_name}_kfold_tested_on_holdout_metrics_{time_stamp}.csv")
-    summary_stats_csv_path = os.path.join(exp_base_dir, f"{args.model_name}_kfold_tested_on_holdout_summary_stats_{time_stamp}.csv")
+    fold_test_metrics_csv_path = os.path.join(exp_base_dir, f"{args.model_name}_{args.dataset_name}_num_classes_{args.num_classes}_kfold_tested_on_holdout_metrics_{time_stamp}.csv")
+    summary_stats_csv_path = os.path.join(exp_base_dir, f"{args.model_name}_{args.dataset_name}_num_classes_{args.num_classes}_kfold_tested_on_holdout_summary_stats_{time_stamp}.csv")
     fold_test_metrics_df.to_csv(fold_test_metrics_csv_path, index=False)
     summary_stats_df.to_csv(summary_stats_csv_path, index=False)
 
