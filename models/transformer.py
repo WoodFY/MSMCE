@@ -3,7 +3,7 @@ import torch.nn as nn
 
 import argparse
 
-from models.embedding.learnable_embedding import MultiChannelEmbedding
+from models.embedding.multi_channel_embedding import MSMCE
 
 
 class Transformer(nn.Module):
@@ -61,7 +61,7 @@ class EmbeddingTransformer(Transformer):
 
     def forward(self, x):
         if self.embedding_module:
-            if self.embedding_type == 'MultiChannelEmbedding':
+            if self.embedding_type == 'MSMCE':
                 x_embedded = self.embedding_module(x)
                 cls_token = self.cls_token.expand(x_embedded.size(0), -1, -1)
                 x_embedded = torch.cat([cls_token, x_embedded], dim=1)
@@ -78,15 +78,13 @@ def build_transformer(args):
 
     model_name = args.model_name
 
-    if 'MultiChannelEmbedding' in model_name:
-        embedding_type = 'MultiChannelEmbedding'
-        embedding_module = MultiChannelEmbedding(
+    if 'MSMCE' in model_name:
+        embedding_type = 'MSMCE'
+        embedding_module = MSMCE(
             spectrum_dim=args.spectrum_dim,
             embedding_channels=args.embedding_channels,
             embedding_dim=args.embedding_dim
         )
-    elif 'Embedding' in model_name and not any(substring in model_name for substring in ['MultiChannel']):
-        raise ValueError(f"Invalid model name: {model_name}")
     else:
         embedding_type = None
         embedding_module = None
@@ -119,7 +117,7 @@ def build_transformer(args):
 
 if __name__ == '__main__':
     args = {
-        'model_name': 'MultiChannelEmbeddingTransformer',
+        'model_name': 'MSMCE-Transformer',
         # 'model_name': 'Transformer',
         'in_channels': 1,
         'spectrum_dim': 15000,

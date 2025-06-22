@@ -1,9 +1,9 @@
 import numpy as np
 
 
-def bin_spectra(mz_arrays, intensity_arrays, min_mz=100.0, max_mz=1600.0, bin_size=0.1):
-    num_bins = int((max_mz - min_mz) / bin_size)
-    bin_mz_array = np.arange(min_mz, max_mz, bin_size)
+def binning(mz_arrays, intensity_arrays, mz_min, mz_max, bin_size=0.1):
+    num_bins = int((mz_max - mz_min) / bin_size)
+    bin_mz_array = np.arange(mz_min, mz_max, bin_size)
     bin_intensity_matrix = []
 
     for mz_array, intensity_array in zip(mz_arrays, intensity_arrays):
@@ -11,8 +11,8 @@ def bin_spectra(mz_arrays, intensity_arrays, min_mz=100.0, max_mz=1600.0, bin_si
 
         bin_intensity_array = np.zeros(num_bins)
         for mz, intensity in zip(mz_array, intensity_array):
-            if min_mz <= mz < max_mz:
-                bin_index = int((mz - min_mz) / bin_size)
+            if mz_min <= mz < mz_max:
+                bin_index = int((mz - mz_min) / bin_size)
                 bin_intensity_array[bin_index] += intensity
 
         bin_intensity_matrix.append(bin_intensity_array)

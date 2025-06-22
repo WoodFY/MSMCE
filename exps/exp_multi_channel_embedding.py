@@ -23,12 +23,9 @@ from models.efficientnet_1d import build_efficientnet_1d
 from models.lstm import build_lstm
 from models.transformer import build_transformer
 from callbacks.early_stopping import EarlyStopping
-from utils.data_normalization import tic_normalization
+from utils.normalization import tic_normalization
 from utils.train_utils import train, test
 from utils.metrics import calculate_bootstrap_ci
-
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "0, 2, 3"
 
 
 def set_seeds(random_seed):
@@ -55,7 +52,7 @@ def run_experiment(args):
         X_test = tic_normalization(X_test)
         print("Normalization complete.")
 
-    if 'MultiChannelEmbedding' in args.model_name:
+    if 'MSMCE' in args.model_name:
         exp_dir_name = (
             f"{args.model_name}_{args.dataset_name}_num_classes_{args.num_classes}_"
             f"in_channels_{args.in_channels}_spectrum_dim_{args.spectrum_dim}_"
@@ -140,8 +137,9 @@ def run_experiment(args):
             early_stopping = None
 
         model_summary = summary(model, input_size=(args.batch_size, args.spectrum_dim))
+        summary_file_path = os.path.join(exp_base_dir, f"model_summary.txt")
         # save models summary to txt
-        with open(os.path.join(exp_base_dir, f"{exp_dir_name}_model_summary.txt"), 'w', encoding='utf-8') as file:
+        with open(summary_file_path, 'w', encoding='utf-8') as file:
             file.write(str(model_summary))
 
         if not args.use_multi_gpu:
@@ -153,10 +151,11 @@ def run_experiment(args):
             params_str = f'{params / 1e6:.2f}M Params'
             print(f"FLOPs: {flops_str}")
             print(f"Parameters: {params_str}")
-            with open(os.path.join(exp_base_dir, f"{exp_dir_name}_model_flops_params.txt"), 'w', encoding='utf-8') as file:
+            model_flops_params_file_path = os.path.join(exp_base_dir, f"model_flops_params.txt")
+            with open(model_flops_params_file_path, 'w', encoding='utf-8') as file:
                 file.write(f"FLOPs: {flops_str}\n")
                 file.write(f"Params: {params_str}\n")
-            time.sleep(10000)
+            # time.sleep(10000)
 
         train(
             model=model,
@@ -243,7 +242,6 @@ def main():
     parser.add_argument('--preload', action='store_true', help='Preload dataset into memory')
     parser.add_argument('--num_workers', type=int, default=8, help='Number of workers for DataLoader')
     parser.add_argument('--use_multi_gpu', action='store_true', help='Use multiple GPUs')
-    parser.add_argument('--use_augmentation', action='store_true', help='Use augmentation')
     parser.add_argument('--use_normalization', action='store_true', help='Use normalization')
     parser.add_argument('--use_early_stopping', action='store_true', help='Use early stopping')
     parser.add_argument('--patience', type=int, default=10, help='Early stopping patience')

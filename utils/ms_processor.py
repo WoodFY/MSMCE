@@ -1,62 +1,8 @@
 import os
 import numpy as np
-import pyopenms as openms
+from pyteomics import mzml
 
-from utils.data_process import bin_spectra
-
-
-def read_mzxml(file_path, tic_threshold=None, non_zero_threshold=None, tic_normalize=False, min_max_normalize=False):
-
-    mz_arrays = []
-    intensity_arrays = []
-
-    experiment = openms.MSExperiment()
-    openms.MzXMLFile().load(file_path, experiment)
-
-    for spectrum in experiment:
-        peaks = spectrum.get_peaks()
-
-        mz_array = peaks[0]
-        intensity_array = peaks[1]
-
-        if tic_threshold is not None:
-            # Total Ion Count (TIC) threshold
-            tic = np.sum(intensity_array)
-
-            if tic > tic_threshold:
-
-                if tic_normalize:
-                    intensity_array = intensity_array / tic
-                elif min_max_normalize:
-                    intensity_array = (intensity_array - intensity_array.min()) / (intensity_array.max() - intensity_array.min())
-                elif tic_normalize and min_max_normalize:
-                    raise ValueError("Both tic_normalize and min_max_normalize cannot be True.")
-
-                mz_arrays.append(mz_array)
-                intensity_arrays.append(intensity_array)
-
-        elif non_zero_threshold is not None:
-            non_zero_intensity_count = np.sum(intensity_array != 0)
-
-            if non_zero_intensity_count > non_zero_threshold:
-
-                if tic_normalize:
-                    intensity_array = intensity_array / np.sum(intensity_array)
-                elif min_max_normalize:
-                    intensity_array = (intensity_array - intensity_array.min()) / (intensity_array.max() - intensity_array.min())
-                elif tic_normalize and min_max_normalize:
-                    raise ValueError("Both tic_normalize and min_max_normalize cannot be True.")
-
-                mz_arrays.append(mz_array)
-                intensity_arrays.append(intensity_array)
-
-        elif tic_threshold is not None and non_zero_threshold is not None:
-            raise ValueError("Both tic_threshold and non_zero_threshold cannot")
-
-        elif tic_threshold is None and non_zero_threshold is None:
-            raise ValueError("Either tic_threshold or non_zero_threshold must be provided.")
-
-    return mz_arrays, intensity_arrays
+from utils.bin_ms import binning
 
 
 def read_mzml(file_path, tic_threshold=None, non_zero_threshold=None, tic_normalize=False, min_max_normalize=False):
@@ -64,14 +10,14 @@ def read_mzml(file_path, tic_threshold=None, non_zero_threshold=None, tic_normal
     mz_arrays = []
     intensity_arrays = []
 
-    experiment = openms.MSExperiment()
-    openms.MzMLFile().load(file_path, experiment)
+    with mzml.read(file_path) as reader:
+        spectra = list(reader)
 
-    for spectrum in experiment:
-        peaks = spectrum.get_peaks()
+    spectra.sort(key=lambda s: s['scanList']['scan'][0]['scan start time'])
 
-        mz_array = peaks[0]
-        intensity_array = peaks[1]
+    for spectrum in spectra:
+        mz_array = spectrum['m/z array']
+        intensity_array = spectrum['intensity array']
 
         if tic_threshold is not None:
             # Total Ion Count (TIC) threshold
@@ -113,24 +59,25 @@ def read_mzml(file_path, tic_threshold=None, non_zero_threshold=None, tic_normal
     return mz_arrays, intensity_arrays
 
 
-def load_mass_spectra_process_to_bin(file_paths, file_type, get_label_function, label_mapping, min_mz, max_mz, bin_size, tic_threshold=None, rt_binning_window=None):
+def load_mass_spectra_process_to_bin(file_paths, file_type, get_label_function, label_mapping, mz_min, mz_max, bin_size, tic_threshold=None, rt_binning_window=None):
 
-    bin_mz_array = np.arange(min_mz, max_mz, bin_size)
+    bin_mz_array = np.arange(mz_min, mz_max, bin_size)
     bin_merged_intensity_matrix = []
     labels = []
 
     for file_path in file_paths:
         print(f"Processing file: {file_path}")
-        exp = openms.MSExperiment()
 
         if file_type == 'mzML':
-            openms.MzMLFile().load(file_path, exp)
+            with mzml.read(file_path) as reader:
+                spectra = list(reader)
         elif file_type == 'mzXML':
-            openms.MzXMLFile().load(file_path, exp)
+            with mzml.read(file_path) as reader:
+                spectra = list(reader)
         else:
             raise ValueError(f"Unknown file type: {file_type}")
 
-        exp.sortSpectra(True)
+        spectra.sort(key=lambda s: s['scanList']['scan'][0]['scan start time'])
 
         label = get_label_function(file_path)
         mapped_label = label_mapping[label]
@@ -139,8 +86,10 @@ def load_mass_spectra_process_to_bin(file_paths, file_type, get_label_function, 
         intensity_arrays = []
         rt_list = []
 
-        for spectrum in exp:
-            mz_array, intensity_array = spectrum.get_peaks()
+        for spectrum in spectra:
+            mz_array = spectrum['m/z array']
+            intensity_array = spectrum['intensity array']
+            rt_seconds = spectrum['scanList']['scan'][0]['scan start time'] * 60
 
             if tic_threshold:
                 tic = np.sum(intensity_array)
@@ -149,13 +98,13 @@ def load_mass_spectra_process_to_bin(file_paths, file_type, get_label_function, 
 
             mz_arrays.append(mz_array)
             intensity_arrays.append(intensity_array)
-            rt_list.append(spectrum.getRT())
+            rt_list.append(rt_seconds)
 
-        _, bin_intensity_matrix = bin_spectra(
+        _, bin_intensity_matrix = binning(
             mz_arrays=mz_arrays,
             intensity_arrays=intensity_arrays,
-            min_mz=min_mz,
-            max_mz=max_mz,
+            mz_min=mz_min,
+            mz_max=mz_max,
             bin_size=bin_size
         )
 
@@ -237,7 +186,7 @@ def load_canine_sarcoma_mzml(file_paths, label_mapping, num_classes):
     return total_mz_arrays, total_intensity_arrays, labels
 
 
-def load_nsclc_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binning_window):
+def load_nsclc_mzml(file_paths, label_mapping, mz_min, mz_max, bin_size, rt_binning_window):
 
     def get_label_from_path(file_path):
         filename = os.path.basename(file_path)
@@ -254,14 +203,14 @@ def load_nsclc_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binn
         file_type='mzML',
         get_label_function=get_label_from_path,
         label_mapping=label_mapping,
-        min_mz=min_mz,
-        max_mz=max_mz,
+        mz_min=mz_min,
+        mz_max=mz_max,
         bin_size=bin_size,
         rt_binning_window=rt_binning_window
     )
 
 
-def load_crlm_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binning_window):
+def load_crlm_mzml(file_paths, label_mapping, mz_min, mz_max, bin_size, rt_binning_window):
 
     def get_label_from_path(file_path):
         dir_name = os.path.basename(os.path.dirname(file_path))
@@ -276,14 +225,14 @@ def load_crlm_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binni
         file_type='mzML',
         get_label_function=get_label_from_path,
         label_mapping=label_mapping,
-        min_mz=min_mz,
-        max_mz=max_mz,
+        mz_min=mz_min,
+        mz_max=mz_max,
         bin_size=bin_size,
         rt_binning_window=rt_binning_window
     )
 
 
-def load_rcc_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binning_window):
+def load_rcc_mzml(file_paths, label_mapping, mz_min, mz_max, bin_size, rt_binning_window):
 
     def get_label_from_path(file_path):
         dir_name = os.path.basename(os.path.dirname(file_path))
@@ -298,16 +247,8 @@ def load_rcc_mzml(file_paths, label_mapping, min_mz, max_mz, bin_size, rt_binnin
         file_type='mzML',
         get_label_function=get_label_from_path,
         label_mapping=label_mapping,
-        min_mz=min_mz,
-        max_mz=max_mz,
+        mz_min=mz_min,
+        mz_max=mz_max,
         bin_size=bin_size,
         rt_binning_window=rt_binning_window
     )
-
-
-
-
-
-
-
-

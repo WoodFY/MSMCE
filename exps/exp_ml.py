@@ -10,7 +10,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 from datasets.prepare_datasets import prepare_dataset
-from utils.data_normalization import tic_normalization
+from utils.normalization import tic_normalization
 from utils.ml_train_utils import train_test_ml
 from utils.metrics import calculate_bootstrap_ci
 

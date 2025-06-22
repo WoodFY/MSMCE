@@ -4,7 +4,7 @@ import torch.nn as nn
 import re
 import argparse
 
-from models.embedding.learnable_embedding import MultiChannelEmbedding
+from models.embedding.multi_channel_embedding import MSMCE
 
 
 class DenseLayer(nn.Module):
@@ -167,7 +167,7 @@ class EmbeddingDenseNet1D(DenseNet1D):
         self.embedding_module = embedding_module
 
         if embedding_type and embedding_module:
-            if embedding_type == 'MultiChannelEmbedding':
+            if embedding_type == 'MSMCE':
                 self.conv1 = nn.Conv1d(in_channels=embedding_channels + 1, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False)
             else:
                 self.conv1 = nn.Conv1d(in_channels=embedding_channels, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False)
@@ -175,7 +175,7 @@ class EmbeddingDenseNet1D(DenseNet1D):
     def forward(self, x):
 
         if self.embedding_module:
-            if self.embedding_type == 'MultiChannelEmbedding':
+            if self.embedding_type == 'MSMCE':
                 # (batch_size, embedding_channels + 1, embedding_dim)
                 x_embedded = self.embedding_module(x)
                 return super().forward(x_embedded)
@@ -197,23 +197,21 @@ def build_densenet_1d(args):
     embedding_type = None
     embedding_module = None
 
-    if 'MultiChannelEmbedding' in model_name:
-        embedding_type = 'MultiChannelEmbedding'
-        embedding_module = MultiChannelEmbedding(
+    if 'MSMCE' in model_name:
+        embedding_type = 'MSMCE'
+        embedding_module = MSMCE(
             spectrum_dim=args.spectrum_dim,
             embedding_channels=args.embedding_channels,
             embedding_dim=args.embedding_dim
         )
-        base_model_name = model_name.replace('MultiChannelEmbedding', '')
-    elif 'Embedding' in model_name and not any(substring in model_name for substring in ['MultiChannel']):
-        raise ValueError(f"Invalid or unsupported embedding type in model name: {model_name}")
+        base_model_name = model_name.replace('MSMCE', '')
     else:
         base_model_name = model_name
 
     # DenseNet121 -> densenet121
-    match = re.match(r'([A-Za-z_]*)DenseNet(\d+)', base_model_name, re.IGNORECASE)
+    match = re.match(r'([A-Za-z_-]*)DenseNet(\d+)', base_model_name, re.IGNORECASE)
     if match:
-        base_model_key = base_model_name.lower()
+        base_model_key = f"densenet{match.group(2)}"
     else:
         raise ValueError(f"Invalid model name: {base_model_name}")
 
@@ -222,7 +220,7 @@ def build_densenet_1d(args):
         growth_rate, compression_factor, densenet_variant = densenet_parameters[base_model_key]
 
         if embedding_module:
-            if embedding_type == 'MultiChannelEmbedding':
+            if embedding_type == 'MSMCE':
                 return EmbeddingDenseNet1D(
                     densenet_variant=densenet_variant,
                     growth_rate=growth_rate,
@@ -247,7 +245,7 @@ def build_densenet_1d(args):
 
 if __name__ == '__main__':
     args = {
-        'model_name': 'MultiChannelEmbeddingDenseNet121',
+        'model_name': 'MSMCE-DenseNet121',
         # 'model_name': 'DenseNet121',
         'in_channels': 1,
         'spectrum_dim': 15000,

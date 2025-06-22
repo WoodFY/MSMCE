@@ -8,14 +8,14 @@ from utils.file_split import (
     split_crlm_files,
     split_rcc_mzml_files,
 )
-from utils.data_loader import (
+from utils.ms_processor import (
     load_canine_sarcoma_mzml,
     load_nsclc_mzml,
     load_crlm_mzml,
     load_rcc_mzml,
 )
 from utils.dataset_split import split_dataset
-from utils.data_process import bin_spectra
+from utils.bin_ms import binning
 
 
 def save_raw_mass_spec_data_to_pickle(file_path, mz_arrays, intensity_arrays, labels):
@@ -54,11 +54,11 @@ def prepare_canine_sarcoma_dataset(args):
         num_classes=args.num_classes
     )
 
-    bin_mz_array, bin_intensity_matrix = bin_spectra(
+    bin_mz_array, bin_intensity_matrix = binning(
         mz_arrays=mz_arrays,
         intensity_arrays=intensity_arrays,
-        min_mz=100.0,
-        max_mz=1600.0,
+        mz_min=100.0,
+        mz_max=1600.0,
         bin_size=args.bin_size
     )
 
@@ -98,16 +98,16 @@ def prepare_nsclc_dataset(args):
     train_mz_array, X_train, y_train = load_nsclc_mzml(
         file_paths=train_file_paths,
         label_mapping=args.label_mapping,
-        min_mz=400.0,
-        max_mz=1600.0,
+        mz_min=400.0,
+        mz_max=1600.0,
         bin_size=args.bin_size,
         rt_binning_window=args.rt_binning_window
     )
     test_mz_array, X_test, y_test = load_nsclc_mzml(
         file_paths=test_file_paths,
         label_mapping=args.label_mapping,
-        min_mz=400.0,
-        max_mz=1600.0,
+        mz_min=400.0,
+        mz_max=1600.0,
         bin_size=args.bin_size,
         rt_binning_window=args.rt_binning_window
     )
@@ -140,16 +140,16 @@ def prepare_crlm_dataset(args):
     train_mz_array, X_train, y_train = load_crlm_mzml(
         file_paths=train_file_paths,
         label_mapping=args.label_mapping,
-        min_mz=400.0,
-        max_mz=1600.0,
+        mz_min=400.0,
+        mz_max=1600.0,
         bin_size=args.bin_size,
         rt_binning_window=args.rt_binning_window
     )
     test_mz_array, X_test, y_test = load_crlm_mzml(
         file_paths=test_file_paths,
         label_mapping=args.label_mapping,
-        min_mz=400.0,
-        max_mz=1600.0,
+        mz_min=400.0,
+        mz_max=1600.0,
         bin_size=args.bin_size,
         rt_binning_window=args.rt_binning_window
     )
@@ -187,16 +187,16 @@ def prepare_rcc_dataset(args):
     train_mz_array, X_train, y_train = load_rcc_mzml(
         file_paths=train_file_paths,
         label_mapping=args.label_mapping,
-        min_mz=70.0,
-        max_mz=1060.0,
+        mz_min=70.0,
+        mz_max=1060.0,
         bin_size=args.bin_size,
         rt_binning_window=args.rt_binning_window
     )
     test_mz_array, X_test, y_test = load_rcc_mzml(
         file_paths=test_file_paths,
         label_mapping=args.label_mapping,
-        min_mz=70.0,
-        max_mz=1060.0,
+        mz_min=70.0,
+        mz_max=1060.0,
         bin_size=args.bin_size,
         rt_binning_window=args.rt_binning_window
     )

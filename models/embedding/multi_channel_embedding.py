@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 
-class MultiChannelEmbedding(nn.Module):
+class MSMCE(nn.Module):
 
     def __init__(self, spectrum_dim, embedding_channels, embedding_dim):
         super().__init__()

@@ -3,7 +3,7 @@ import torch.nn as nn
 
 import argparse
 
-from models.embedding.learnable_embedding import MultiChannelEmbedding
+from models.embedding.multi_channel_embedding import MSMCE
 
 
 class LSTM(nn.Module):
@@ -44,7 +44,7 @@ class EmbeddingLSTM(LSTM):
 
     def forward(self, x):
         if self.embedding_module:
-            if self.embedding_type == 'MultiChannelEmbedding':
+            if self.embedding_type == 'MSMCE':
                 x_embedded = self.embedding_module(x)
                 return super().forward(x_embedded)
         else:
@@ -58,15 +58,13 @@ def build_lstm(args):
 
     model_name = args.model_name
 
-    if 'MultiChannelEmbedding' in model_name:
-        embedding_type = 'MultiChannelEmbedding'
-        embedding_module = MultiChannelEmbedding(
+    if 'MSMCE' in model_name:
+        embedding_type = 'MSMCE'
+        embedding_module = MSMCE(
             spectrum_dim=args.spectrum_dim,
             embedding_channels=args.embedding_channels,
             embedding_dim=args.embedding_dim
         )
-    elif 'Embedding' in model_name and not any(substring in model_name for substring in ['MultiChannel']):
-        raise ValueError(f"Invalid model name: {model_name}")
     else:
         embedding_type = None
         embedding_module = None
@@ -97,7 +95,7 @@ def build_lstm(args):
 
 if __name__ == '__main__':
     args = {
-        'model_name': 'MultiChannelEmbeddingLSTM',
+        'model_name': 'MSMCE-LSTM',
         # 'model_name': 'LSTM',
         'in_channels': 1,
         'spectrum_dim': 15000,
